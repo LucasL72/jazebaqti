@@ -38,7 +38,9 @@ function createAppTheme(mode: PaletteMode) {
       fontFamily:
         'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
+    
   });
+  
 }
 
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {

@@ -1,3 +1,4 @@
+// app/albums/[id]/page.tsx
 "use client";
 
 import Image from "next/image";
@@ -49,6 +50,16 @@ export default function AlbumPage() {
     (a, b) => a.trackNumber - b.trackNumber
   );
 
+  const queueForAlbum = tracks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    trackNumber: t.trackNumber,
+    durationSeconds: t.durationSeconds,
+    audioUrl: t.audioUrl,
+    albumTitle: album.title,
+    albumCoverUrl: coverUrl,
+  }));
+
   return (
     <div className="main-shell">
       {/* Sidebar / topbar responsive */}
@@ -63,7 +74,7 @@ export default function AlbumPage() {
           direction={{ xs: "column", sm: "row" }}
           spacing={{ xs: 2, sm: 4 }}
           alignItems={{ xs: "flex-start", sm: "center" }}
-          sx={{ mb: 3 }}
+          sx={{ mb: 2 }}
         >
           <Box
             sx={{
@@ -72,7 +83,7 @@ export default function AlbumPage() {
               borderRadius: 2,
               overflow: "hidden",
               position: "relative",
-              bgcolor: "background.paper", // suit le thème
+              bgcolor: "background.paper",
             }}
           >
             {coverUrl && (
@@ -98,6 +109,20 @@ export default function AlbumPage() {
             <Typography variant="body2" color="text.secondary">
               {tracks.length} titres
             </Typography>
+
+            {/* 👉 Bouton global Lire l’album */}
+            {tracks.length > 0 && (
+              <Button
+                variant="contained"
+                size="medium"
+                sx={{ mt: 1 }}
+                onClick={() => {
+                  playTrackList(queueForAlbum, 0);
+                }}
+              >
+                ▶ Lire l&apos;album depuis le début
+              </Button>
+            )}
           </Stack>
         </Stack>
 
@@ -154,16 +179,7 @@ export default function AlbumPage() {
                   variant={isCurrent && isPlaying ? "contained" : "outlined"}
                   size="small"
                   onClick={() => {
-                    const formatted = tracks.map((t) => ({
-                      id: t.id,
-                      title: t.title,
-                      trackNumber: t.trackNumber,
-                      durationSeconds: t.durationSeconds,
-                      audioUrl: t.audioUrl,
-                      albumTitle: album.title,
-                      albumCoverUrl: coverUrl,
-                    }));
-                    playTrackList(formatted, index);
+                    playTrackList(queueForAlbum, index);
                   }}
                   sx={{
                     ml: 2,
