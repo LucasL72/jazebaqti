@@ -1,34 +1,8 @@
 // app/api/admin/tracks/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import path from "path";
-import { unlink } from "fs/promises";
+import { deleteMediaAtUrl } from "@/lib/media-storage";
 import { requireAdminSession } from "@/lib/admin-session";
-
-function isLocalMediaUrl(url: string | null | undefined) {
-  if (!url) return false;
-  return url.startsWith("/audio/albums/") || url.startsWith("/images/albums/");
-}
-
-async function deleteLocalFileIfExists(url: string | null | undefined) {
-  if (!isLocalMediaUrl(url)) return;
-  const relative = url.replace(/^\//, ""); // enlève le premier "/"
-  const fsPath = path.join(process.cwd(), "public", relative);
-
-  try {
-    await unlink(fsPath);
-  } catch (err: unknown) {
-    // Si le fichier n'existe pas, on ignore
-    type WithCode = { code?: string };
-    const code =
-      typeof err === "object" && err && "code" in err
-        ? (err as WithCode).code
-        : null;
-    if (code !== "ENOENT") {
-      console.error("Erreur lors de la suppression du fichier:", fsPath, err);
-    }
-  }
-}
 
 type Params = {
   params: {
@@ -69,7 +43,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
     // Si l'URL audio a changé et que l'ancienne était locale -> on supprime l'ancien fichier
     if (existing.audioUrl && existing.audioUrl !== updated.audioUrl) {
-      await deleteLocalFileIfExists(existing.audioUrl);
+      await deleteMediaAtUrl(existing.audioUrl);
     }
 
     return NextResponse.json(updated);
@@ -99,7 +73,7 @@ export async function DELETE(_: Request, { params }: Params) {
     }
 
     // Suppression du fichier audio si local
-    await deleteLocalFileIfExists(existing.audioUrl);
+    await deleteMediaAtUrl(existing.audioUrl);
 
     await prisma.track.delete({ where: { id } });
 
