@@ -1,12 +1,10 @@
 // app/api/admin/upload/route.ts
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
 import { requireAdminSession } from "@/lib/admin-session";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logAuditEvent } from "@/lib/audit-log";
 import { AuditSeverity } from "@prisma/client";
+import { validateAndStoreMedia } from "@/lib/media-storage";
 
 export async function POST(req: Request) {
   const rateLimited = await enforceRateLimit(req, {
@@ -24,6 +22,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const type = formData.get("type") as string | null; // "audio" | "image"
+  const albumId = formData.get("albumId") as string | null;
 
   if (!file || !type) {
     return NextResponse.json(
@@ -32,42 +31,43 @@ export async function POST(req: Request) {
     );
   }
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  const ext = file.name.split(".").pop() || "bin";
-  const filename = `${Date.now()}-${Math.random()
-    .toString(16)
-    .slice(2)}.${ext}`;
-
-  let baseDir: string;
-  if (type === "audio") {
-    baseDir = "audio";
-  } else if (type === "image") {
-    baseDir = "images/albums";
-  } else {
-    baseDir = "uploads";
+  if (type !== "audio" && type !== "image") {
+    return NextResponse.json(
+      { error: "Type d'upload non supporté" },
+      { status: 400 }
+    );
   }
 
-  const uploadDir = path.join(process.cwd(), "public", baseDir);
-  if (!existsSync(uploadDir)) {
-    await mkdir(uploadDir, { recursive: true });
-  }
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-  const filePath = path.join(uploadDir, filename);
-  await writeFile(filePath, buffer);
-
-  const url = `/${baseDir}/${filename}`;
-  await logAuditEvent("media.upload", {
-    actor: session.user,
-    severity: AuditSeverity.info,
-    message: `Upload ${type}`,
-    metadata: {
-      filename: file.name,
-      size: file.size,
+    const persisted = await validateAndStoreMedia({
+      fileBuffer: buffer,
+      fileName: file.name,
+      declaredMime: file.type,
       type,
-      url,
-    },
-  });
-  return NextResponse.json({ url });
+      albumId,
+    });
+
+    await logAuditEvent("media.upload", {
+      actor: session.user,
+      severity: AuditSeverity.info,
+      message: `Upload ${type}`,
+      metadata: {
+        filename: file.name,
+        size: file.size,
+        type,
+        url: persisted.url,
+        key: persisted.key,
+        mime: persisted.mime,
+      },
+    });
+
+    return NextResponse.json({ url: persisted.url });
+  } catch (err: unknown) {
+    console.error("Erreur upload", err);
+    const message = err instanceof Error ? err.message : "Erreur upload";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

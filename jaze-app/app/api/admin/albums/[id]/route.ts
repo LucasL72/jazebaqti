@@ -1,42 +1,41 @@
 // app/api/admin/albums/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import path from "path";
-import { unlink } from "fs/promises";
 import { requireAdminSession } from "@/lib/admin-session";
 import { logAuditEvent } from "@/lib/audit-log";
 import { AuditSeverity } from "@prisma/client";
+import { deleteMediaAtUrl } from "@/lib/media-storage";
+import path from "path";
+import { existsSync } from "fs";
+import { stat } from "fs/promises";
+
+const LOCAL_WHITELIST = ["/audio/albums/", "/images/albums/"];
+
+function isLocalMediaUrl(url: string | null | undefined) {
+  if (!url) return false;
+  return LOCAL_WHITELIST.some((prefix) => url.startsWith(prefix));
+}
+
+async function deleteLegacyLocalFile(url: string | null | undefined) {
+  if (!isLocalMediaUrl(url)) return;
+  const relative = url.replace(/^\//, "");
+  const fsPath = path.join(process.cwd(), "public", relative);
+
+  try {
+    const info = existsSync(fsPath) ? await stat(fsPath) : null;
+    if (info?.isFile()) {
+      await deleteMediaAtUrl(url);
+    }
+  } catch (err: unknown) {
+    console.error("Erreur lors de la suppression du fichier:", fsPath, err);
+  }
+}
 
 type RouteContext = {
   params: Promise<{
     id: string;
   }>;
 };
-
-// Helpers pour gérer les fichiers locaux
-function isLocalMediaUrl(url: string | null | undefined) {
-  if (!url) return false;
-  return url.startsWith("/audio/albums/") || url.startsWith("/images/albums/");
-}
-
-async function deleteLocalFileIfExists(url: string | null | undefined) {
-  if (!isLocalMediaUrl(url)) return;
-  const relative = url.replace(/^\//, ""); // enlève le "/" de début
-  const fsPath = path.join(process.cwd(), "public", relative);
-
-  try {
-    await unlink(fsPath);
-  } catch (err: unknown) {
-    type WithCode = { code?: string };
-    const code =
-      typeof err === "object" && err && "code" in err
-        ? (err as WithCode).code
-        : null;
-    if (code !== "ENOENT") {
-      console.error("Erreur lors de la suppression du fichier:", fsPath, err);
-    }
-  }
-}
 
 // ---------- GET : un album + ses pistes ----------
 export async function GET(_req: Request, context: RouteContext) {
@@ -112,7 +111,8 @@ export async function PATCH(req: Request, context: RouteContext) {
 
     // si la cover a changé et que l’ancienne était locale -> on supprime l'ancien fichier
     if (existing.coverUrl && existing.coverUrl !== updated.coverUrl) {
-      await deleteLocalFileIfExists(existing.coverUrl);
+      await deleteMediaAtUrl(existing.coverUrl);
+      await deleteLegacyLocalFile(existing.coverUrl);
     }
 
     return NextResponse.json(updated);
@@ -149,11 +149,13 @@ export async function DELETE(_req: Request, context: RouteContext) {
 
     // 1) supprimer les fichiers audio locaux des pistes
     for (const track of album.tracks) {
-      await deleteLocalFileIfExists(track.audioUrl);
+      await deleteMediaAtUrl(track.audioUrl);
+      await deleteLegacyLocalFile(track.audioUrl);
     }
 
     // 2) supprimer la cover locale si besoin
-    await deleteLocalFileIfExists(album.coverUrl);
+    await deleteMediaAtUrl(album.coverUrl);
+    await deleteLegacyLocalFile(album.coverUrl);
 
     // 3) supprimer les données en base
     await prisma.track.deleteMany({ where: { albumId: id } });

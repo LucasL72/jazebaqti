@@ -63,10 +63,17 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     err instanceof Error ? err.message : "Erreur inattendue";
 
   // ---------- Upload helpers ----------
-  async function uploadFile(file: File, type: "audio" | "image") {
+  async function uploadFile(
+    file: File,
+    type: "audio" | "image",
+    extra: { albumId?: number } = {}
+  ) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
+    if (extra.albumId) {
+      formData.append("albumId", String(extra.albumId));
+    }
 
     const res = await fetch("/api/admin/upload", {
       method: "POST",
@@ -117,7 +124,7 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     if (!file) return;
 
     try {
-      const url = await uploadFile(file, "image");
+      const url = await uploadFile(file, "image", { albumId: album.id });
       setCoverUrl(url);
     } catch (err: unknown) {
       setError(getErrorMessage(err));
@@ -184,7 +191,7 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     if (!file) return;
 
     try {
-      const url = await uploadFile(file, "audio");
+      const url = await uploadFile(file, "audio", { albumId: album.id });
       setNewTrack((prev) => ({ ...prev, audioUrl: url }));
     } catch (err: unknown) {
       setError(getErrorMessage(err));
@@ -257,7 +264,7 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     if (!file) return;
 
     try {
-      const url = await uploadFile(file, "audio");
+      const url = await uploadFile(file, "audio", { albumId: album.id });
       setEditingValues((prev) => ({ ...prev, audioUrl: url }));
     } catch (err: unknown) {
       setError(getErrorMessage(err));

@@ -44,6 +44,9 @@ The admin area is protected by database-backed sessions, short-lived cookies, an
 - `ADMIN_TOTP_SECRET`: hex-encoded 2FA secret (generate with `openssl rand -hex 20`).
 - `ADMIN_SESSION_MAX_AGE_SECONDS` (optional): session lifetime (default 1800s).
 - `ADMIN_PASSWORD_MAX_AGE_DAYS` (optional): password rotation window (default 90 days).
+- `MEDIA_SIGNING_SECRET` (recommended): HMAC secret used to sign private media URLs. Falls back to admin secrets in development.
+
+Media uploads are validated server-side: images must be WebP/PNG/JPEG, audio must be a known audio format, and payloads larger than 40MB (audio) or 10MB (images) are rejected. The API checks the magic bytes to catch disguised executables and refuses uploads whose detected MIME type does not match the declared type. Files are written under `private_media/audio|images/albums` with a slugified name + UUID (e.g. `audio/albums/42/track-my-song-<uuid>.mp3`) and are only served through signed URLs via `/api/media?key=...&sig=...`. The path is normalized to stay inside the whitelisted directories before any write or delete.
 
 ## Audit & alerting
 
