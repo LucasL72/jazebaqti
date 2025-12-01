@@ -59,6 +59,12 @@ model Track {
   album           Album    @relation(fields: [albumId], references: [id])
 }
 
+enum Role {
+  admin
+  editor
+  viewer
+}
+
 model User {
   id                String    @id @default(cuid())
   name              String?
@@ -66,7 +72,7 @@ model User {
   emailVerified     DateTime?
   passwordHash      String?
   passwordUpdatedAt DateTime  @default(now())
-  role              String    @default("admin")
+  role              Role      @default(viewer)
   totpSecret        String?
   totpEnabled       Boolean   @default(false)
 
@@ -100,6 +106,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  role         Role
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
