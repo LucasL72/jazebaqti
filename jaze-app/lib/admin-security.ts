@@ -1,13 +1,11 @@
 import crypto from "crypto";
+import { env } from "./env";
 
 export const ADMIN_PASSWORD_POLICY =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{12,}$/;
 
 export function getSessionMaxAgeSeconds() {
-  const parsed = Number(process.env.ADMIN_SESSION_MAX_AGE_SECONDS);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
-
-  return 60 * 30;
+  return env.ADMIN_SESSION_MAX_AGE_SECONDS;
 }
 
 export function validatePasswordComplexity(password: string) {
@@ -15,10 +13,7 @@ export function validatePasswordComplexity(password: string) {
 }
 
 export function getPasswordMaxAgeDays() {
-  const parsed = Number(process.env.ADMIN_PASSWORD_MAX_AGE_DAYS);
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
-
-  return 90;
+  return env.ADMIN_PASSWORD_MAX_AGE_DAYS;
 }
 
 export function isPasswordExpired(passwordUpdatedAt: Date) {

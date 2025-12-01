@@ -1,5 +1,6 @@
 import { AuditLog, AuditSeverity, Role, User } from "@prisma/client";
 import { prisma } from "./prisma";
+import { env } from "./env";
 
 export type AuditAction =
   | "album.create"
@@ -29,7 +30,7 @@ function buildActorId(context: AuditContext) {
 }
 
 async function sendSlackAlert(text: string) {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const webhookUrl = env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) return;
 
   try {
@@ -44,8 +45,8 @@ async function sendSlackAlert(text: string) {
 }
 
 async function sendEmailAlert(subject: string, text: string) {
-  const to = process.env.AUDIT_ALERT_EMAILS;
-  const webhookUrl = process.env.AUDIT_EMAIL_WEBHOOK_URL;
+  const to = env.AUDIT_ALERT_EMAILS;
+  const webhookUrl = env.AUDIT_EMAIL_WEBHOOK_URL;
   if (!to || !webhookUrl) return;
 
   try {

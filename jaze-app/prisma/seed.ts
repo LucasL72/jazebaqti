@@ -1,14 +1,17 @@
 import { PrismaClient, Role } from "@prisma/client";
 import { hashPassword, validatePasswordComplexity } from "../lib/admin-security";
+import { databaseUrlWithTls, env } from "../lib/env";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: { db: { url: databaseUrlWithTls } },
+});
 
 async function main() {
   console.log("🌱 Seeding database...");
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  const adminTotpSecret = process.env.ADMIN_TOTP_SECRET;
+  const adminEmail = env.ADMIN_EMAIL;
+  const adminPassword = env.ADMIN_PASSWORD;
+  const adminTotpSecret = env.ADMIN_TOTP_SECRET;
 
   if (adminEmail && adminPassword && adminTotpSecret) {
     if (!validatePasswordComplexity(adminPassword)) {
