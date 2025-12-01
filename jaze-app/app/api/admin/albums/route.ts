@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/admin-session";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit-log";
+import { AuditSeverity } from "@prisma/client";
 
 export async function POST(req: Request) {
   const rateLimited = await enforceRateLimit(req, {
@@ -49,6 +51,17 @@ export async function POST(req: Request) {
         releaseYear: Number.isNaN(year) ? null : year,
         coverUrl: coverUrl || null,
         artistId: artist.id,
+      },
+    });
+
+    await logAuditEvent("album.create", {
+      actor: session.user,
+      severity: AuditSeverity.info,
+      message: `Création album ${album.title}`,
+      metadata: {
+        albumId: album.id,
+        title: album.title,
+        releaseYear: album.releaseYear,
       },
     });
 

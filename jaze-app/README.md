@@ -45,4 +45,11 @@ The admin area is protected by database-backed sessions, short-lived cookies, an
 - `ADMIN_SESSION_MAX_AGE_SECONDS` (optional): session lifetime (default 1800s).
 - `ADMIN_PASSWORD_MAX_AGE_DAYS` (optional): password rotation window (default 90 days).
 
+## Audit & alerting
+
+- Sensitive actions (album CRUD, media upload, role changes, admin login attempts) are stored in `audit_logs` with timestamp and actor.
+- Admin dashboard available at `/admin/audit` to review the latest entries and adjust roles.
+- Set `SLACK_WEBHOOK_URL` to receive Slack alerts for mass album deletions or repeated login failures.
+- Set both `AUDIT_EMAIL_WEBHOOK_URL` and `AUDIT_ALERT_EMAILS` to forward the same alerts by email via your webhook provider.
+
 Running the seed will upsert the admin user with the hashed password, TOTP secret, and enforce the password policy. Session cookies are `httpOnly`, `secure`, and `sameSite="lax"`, and sessions are invalidated server-side when expired or revoked.

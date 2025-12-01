@@ -5,6 +5,8 @@ import path from "path";
 import { existsSync } from "fs";
 import { requireAdminSession } from "@/lib/admin-session";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit-log";
+import { AuditSeverity } from "@prisma/client";
 
 export async function POST(req: Request) {
   const rateLimited = await enforceRateLimit(req, {
@@ -56,5 +58,16 @@ export async function POST(req: Request) {
   await writeFile(filePath, buffer);
 
   const url = `/${baseDir}/${filename}`;
+  await logAuditEvent("media.upload", {
+    actor: session.user,
+    severity: AuditSeverity.info,
+    message: `Upload ${type}`,
+    metadata: {
+      filename: file.name,
+      size: file.size,
+      type,
+      url,
+    },
+  });
   return NextResponse.json({ url });
 }
