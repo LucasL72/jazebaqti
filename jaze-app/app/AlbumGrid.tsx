@@ -9,10 +9,15 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  IconButton,
   Stack,
   Typography,
+  Tooltip,
 } from "@mui/material";
 import { usePlayer } from "./PlayerProvider";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import { useFavoriteAlbums } from "@/lib/useFavoriteAlbums";
 
 type TrackForGrid = {
   id: number;
@@ -32,6 +37,7 @@ type AlbumForGrid = {
 
 export function AlbumGrid({ albums }: { albums: AlbumForGrid[] }) {
   const { playTrackList } = usePlayer();
+  const { isFavorite, toggleFavorite, loading: favoritesLoading } = useFavoriteAlbums();
 
   return (
     <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ rowGap: 2 }}>
@@ -49,7 +55,7 @@ export function AlbumGrid({ albums }: { albums: AlbumForGrid[] }) {
           <Box
             key={album.id}
             sx={{
-              width: { xs: "100%", sm: "48%", md: 220 },
+              width: { xs: "100%", sm: "48%", md: 220, lg: 260 },
             }}
           >
             <Card
@@ -58,6 +64,8 @@ export function AlbumGrid({ albums }: { albums: AlbumForGrid[] }) {
                 bgcolor: "background.paper",
                 borderRadius: 2,
                 overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {/* On garde la card cliquable pour aller sur la page album */}
@@ -113,15 +121,33 @@ export function AlbumGrid({ albums }: { albums: AlbumForGrid[] }) {
 
               {/* Bouton Lire l’album (contrôle le player global) */}
               {sortedTracks.length > 0 && (
-                <Box
-                  sx={{
-                    px: 1.5,
-                    pb: 1.5,
-                    pt: 0.5,
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ px: 1.5, pb: 1.25, pt: 0.5, gap: 1 }}
                 >
+                  <Tooltip
+                    title={
+                      isFavorite(album.id)
+                        ? "Retirer des favoris"
+                        : "Ajouter aux favoris"
+                    }
+                  >
+                    <IconButton
+                      aria-label="Basculer favori"
+                      onClick={() => toggleFavorite(album.id)}
+                      disabled={favoritesLoading}
+                      color={isFavorite(album.id) ? "error" : "default"}
+                      size="small"
+                    >
+                      {isFavorite(album.id) ? (
+                        <FavoriteIcon fontSize="small" />
+                      ) : (
+                        <FavoriteBorderIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
                   <Button
                     variant="outlined"
                     size="small"
@@ -140,7 +166,7 @@ export function AlbumGrid({ albums }: { albums: AlbumForGrid[] }) {
                   >
                     ▶ Lire l&apos;album
                   </Button>
-                </Box>
+                </Stack>
               )}
             </Card>
           </Box>

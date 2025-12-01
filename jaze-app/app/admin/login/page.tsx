@@ -20,7 +20,6 @@ export default function AdminLoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [totp, setTotp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { csrfToken, csrfError } = useCsrfToken();
@@ -47,8 +46,6 @@ export default function AdminLoginPage() {
 
     const sanitizedEmail = sanitizeTextInput(email).toLowerCase();
     const sanitizedPassword = sanitizeTextInput(password);
-    const sanitizedTotp = sanitizeTextInput(totp);
-
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
@@ -59,7 +56,6 @@ export default function AdminLoginPage() {
         body: JSON.stringify({
           email: sanitizedEmail,
           password: sanitizedPassword,
-          totp: sanitizedTotp,
         }),
         credentials: "same-origin",
       });
@@ -124,16 +120,6 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
-            <TextField
-              label="Code TOTP (2FA)"
-              type="text"
-              inputMode="numeric"
-              fullWidth
-              value={totp}
-              onChange={(e) => setTotp(e.target.value)}
-              helperText="Code généré par votre application d'authentification"
-            />
-
             <Typography variant="caption" color="text.secondary">
               Politique mot de passe : {passwordPolicy}
             </Typography>

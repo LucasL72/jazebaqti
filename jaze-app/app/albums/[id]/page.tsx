@@ -4,10 +4,22 @@
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Box, Button, Card, Divider, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  Divider,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { usePlayer } from "@/app/PlayerProvider";
 import { PlayerBar } from "@/app/PlayerBar";
 import { GlobalNav } from "@/app/GlobalNav";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import { useFavoriteAlbums } from "@/lib/useFavoriteAlbums";
 
 type Track = {
   id: number;
@@ -31,6 +43,7 @@ export default function AlbumPage() {
 
   const [album, setAlbum] = useState<Album | null>(null);
   const { currentTrack, isPlaying, playTrackList } = usePlayer();
+  const { isFavorite, toggleFavorite, loading: favoritesLoading } = useFavoriteAlbums();
 
   useEffect(() => {
     fetch(`/api/albums/${albumId}`)
@@ -49,6 +62,8 @@ export default function AlbumPage() {
   const tracks = [...album.tracks].sort(
     (a, b) => a.trackNumber - b.trackNumber
   );
+
+  const numericAlbumId = Number(albumId);
 
   const queueForAlbum = tracks.map((t) => ({
     id: t.id,
@@ -111,18 +126,38 @@ export default function AlbumPage() {
             </Typography>
 
             {/* 👉 Bouton global Lire l’album */}
-            {tracks.length > 0 && (
-              <Button
-                variant="contained"
-                size="medium"
-                sx={{ mt: 1 }}
-                onClick={() => {
-                  playTrackList(queueForAlbum, 0);
-                }}
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 1 }}>
+              {tracks.length > 0 && (
+                <Button
+                  variant="contained"
+                  size="medium"
+                  onClick={() => {
+                    playTrackList(queueForAlbum, 0);
+                  }}
+                >
+                  ▶ Lire l&apos;album depuis le début
+                </Button>
+              )}
+
+              <Tooltip
+                title={
+                  numericAlbumId && isFavorite(numericAlbumId)
+                    ? "Retirer des favoris"
+                    : "Ajouter aux favoris"
+                }
               >
-                ▶ Lire l&apos;album depuis le début
-              </Button>
-            )}
+                <span>
+                  <IconButton
+                    aria-label="Basculer favori"
+                    onClick={() => toggleFavorite(Number(album.id))}
+                    disabled={!numericAlbumId || favoritesLoading}
+                    color={isFavorite(Number(album.id)) ? "error" : "default"}
+                  >
+                    {isFavorite(Number(album.id)) ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
           </Stack>
         </Stack>
 

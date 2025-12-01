@@ -42,6 +42,7 @@ model Album {
 
   artist      Artist   @relation(fields: [artistId], references: [id])
   tracks      Track[]
+  favorites   Favorite[]
 }
 
 model Track {
@@ -101,6 +102,7 @@ model User {
   accounts Account[]
   sessions Session[]
   auditLogs AuditLog[]
+  favorites Favorite[]
 }
 
 model Account {
@@ -140,4 +142,18 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  albumId   Int
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, albumId])
+  @@index([userId])
+  @@index([albumId])
 }
