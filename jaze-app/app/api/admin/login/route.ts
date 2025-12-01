@@ -12,6 +12,7 @@ import { createAdminSession } from "@/lib/admin-session";
 import { Role, AuditSeverity } from "@prisma/client";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logAuditEvent } from "@/lib/audit-log";
+import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 export async function POST(req: Request) {
   const rateLimited = await enforceRateLimit(req, {
@@ -22,6 +23,9 @@ export async function POST(req: Request) {
     throttleDelayMs: 400,
   });
   if (rateLimited) return rateLimited;
+
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
 
   const { email, password, totp } = await req.json();
 

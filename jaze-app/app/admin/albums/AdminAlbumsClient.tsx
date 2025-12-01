@@ -1,7 +1,7 @@
 // app/admin/albums/AdminAlbumsClient.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -14,6 +14,9 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useRouter } from "next/navigation";
+import { useCsrfToken } from "@/lib/useCsrfToken";
+import { validateFileInput } from "@/lib/file-validation";
+import { sanitizeTextInput, sanitizeUrlInput } from "@/lib/sanitizers";
 
 type AlbumAdmin = {
   id: number;
@@ -30,6 +33,7 @@ export function AdminAlbumsClient({
 }) {
   const router = useRouter();
   const [albums, setAlbums] = useState<AlbumAdmin[]>(initialAlbums);
+  const { csrfToken, csrfError, refreshCsrfToken } = useCsrfToken();
 
   const [title, setTitle] = useState("");
   const [releaseYear, setReleaseYear] = useState("");
@@ -39,11 +43,21 @@ export function AdminAlbumsClient({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
 
+  useEffect(() => {
+    if (csrfError) {
+      setError(csrfError);
+    }
+  }, [csrfError]);
+
   const getErrorMessage = (err: unknown) =>
     err instanceof Error ? err.message : "Erreur inattendue";
 
   // Helper d’upload pour la cover (image)
   async function uploadFile(file: File) {
+    if (!csrfToken) {
+      throw new Error("Protection CSRF non initialisée");
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", "image"); // côté API: image → /images/albums
@@ -51,6 +65,8 @@ export function AdminAlbumsClient({
     const res = await fetch("/api/admin/upload", {
       method: "POST",
       body: formData,
+      headers: { "X-CSRF-Token": csrfToken },
+      credentials: "same-origin",
     });
 
     if (!res.ok) {
@@ -67,6 +83,13 @@ export function AdminAlbumsClient({
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const validationError = validateFileInput(file, "image");
+    if (validationError) {
+      setError(validationError);
+      e.target.value = "";
+      return;
+    }
 
     setError(null);
     setUploadingCover(true);
@@ -85,7 +108,15 @@ export function AdminAlbumsClient({
     e.preventDefault();
     setError(null);
 
-    if (!title.trim()) {
+    if (!csrfToken) {
+      setError("Protection CSRF indisponible. Merci de recharger le token.");
+      return;
+    }
+
+    const sanitizedTitle = sanitizeTextInput(title);
+    const sanitizedCoverUrl = sanitizeUrlInput(coverUrl);
+
+    if (!sanitizedTitle) {
       setError("Le titre est obligatoire");
       return;
     }
@@ -94,12 +125,16 @@ export function AdminAlbumsClient({
     try {
       const res = await fetch("/api/admin/albums", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
         body: JSON.stringify({
-          title,
+          title: sanitizedTitle,
           releaseYear: releaseYear ? Number(releaseYear) : null,
-          coverUrl: coverUrl || null,
+          coverUrl: sanitizedCoverUrl || null,
         }),
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
@@ -129,6 +164,7 @@ export function AdminAlbumsClient({
       // router.push(`/admin/albums/${created.id}`);
     } catch (err: unknown) {
       setError(getErrorMessage(err));
+      refreshCsrfToken();
     } finally {
       setCreating(false);
     }
@@ -141,6 +177,8 @@ export function AdminAlbumsClient({
     try {
       const res = await fetch(`/api/admin/albums/${id}`, {
         method: "DELETE",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+        credentials: "same-origin",
       });
 
       if (!res.ok) {

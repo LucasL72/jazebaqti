@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -10,6 +10,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useCsrfToken } from "@/lib/useCsrfToken";
+import { sanitizeTextInput } from "@/lib/sanitizers";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -21,6 +23,13 @@ export default function AdminLoginPage() {
   const [totp, setTotp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { csrfToken, csrfError } = useCsrfToken();
+
+  useEffect(() => {
+    if (csrfError) {
+      setError(csrfError);
+    }
+  }, [csrfError]);
 
   const passwordPolicy =
     "12+ caractères, avec majuscules, minuscules, chiffres et caractère spécial";
@@ -30,11 +39,29 @@ export default function AdminLoginPage() {
     setError(null);
     setLoading(true);
 
+    if (!csrfToken) {
+      setError("Protection CSRF indisponible. Merci de recharger la page.");
+      setLoading(false);
+      return;
+    }
+
+    const sanitizedEmail = sanitizeTextInput(email).toLowerCase();
+    const sanitizedPassword = sanitizeTextInput(password);
+    const sanitizedTotp = sanitizeTextInput(totp);
+
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, totp }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify({
+          email: sanitizedEmail,
+          password: sanitizedPassword,
+          totp: sanitizedTotp,
+        }),
+        credentials: "same-origin",
       });
 
       if (!res.ok) {

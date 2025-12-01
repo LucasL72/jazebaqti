@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useContext } from "react";
+import { useEffect, useContext, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -21,6 +21,7 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import { usePathname, useRouter } from "next/navigation";
 import { ColorModeContext } from "./AppThemeProvider";
+import { useCsrfToken } from "@/lib/useCsrfToken";
 
 const navItems = [
   { label: "Accueil", href: "/" },
@@ -33,11 +34,23 @@ export function GlobalNav() {
   const router = useRouter();
   const pathname = usePathname();
   const colorMode = useContext(ColorModeContext);
+  const { csrfToken, csrfError } = useCsrfToken();
+
+  useEffect(() => {
+    if (csrfError) {
+      console.error("Erreur CSRF", csrfError);
+    }
+  }, [csrfError]);
 
   const isAdmin = pathname?.startsWith("/admin");
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
+    if (!csrfToken) return;
+    await fetch("/api/admin/logout", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrfToken },
+      credentials: "same-origin",
+    });
     router.push("/admin/login");
     router.refresh();
   };
