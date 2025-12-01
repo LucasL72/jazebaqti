@@ -13,7 +13,7 @@ async function main() {
   const adminPassword = env.ADMIN_PASSWORD;
   const adminTotpSecret = env.ADMIN_TOTP_SECRET;
 
-  if (adminEmail && adminPassword && adminTotpSecret) {
+  if (adminEmail && adminPassword) {
     if (!validatePasswordComplexity(adminPassword)) {
       throw new Error(
         "ADMIN_PASSWORD ne respecte pas la politique de complexité (12+ car., majuscules, minuscules, chiffres, caractère spécial)."
@@ -26,8 +26,6 @@ async function main() {
       where: { email: adminEmail.toLowerCase() },
       update: {
         passwordHash,
-        totpSecret: adminTotpSecret,
-        totpEnabled: true,
         role: Role.admin,
         passwordUpdatedAt: new Date(),
       },
@@ -35,17 +33,23 @@ async function main() {
         email: adminEmail.toLowerCase(),
         name: "Administrateur",
         passwordHash,
-        totpSecret: adminTotpSecret,
-        totpEnabled: true,
         role: Role.admin,
         passwordUpdatedAt: new Date(),
       },
     });
 
-    console.log("✅ Compte administrateur provisionné avec 2FA");
+    if (adminTotpSecret) {
+      await prisma.user.update({
+        where: { email: adminEmail.toLowerCase() },
+        data: { totpSecret: adminTotpSecret, totpEnabled: true },
+      });
+      console.log("✅ Compte administrateur provisionné (2FA activable)");
+    } else {
+      console.log("✅ Compte administrateur provisionné (sans 2FA)");
+    }
   } else {
     console.warn(
-      "⚠️ Variables ADMIN_EMAIL/ADMIN_PASSWORD/ADMIN_TOTP_SECRET manquantes : aucun compte admin créé"
+      "⚠️ Variables ADMIN_EMAIL/ADMIN_PASSWORD manquantes : aucun compte admin créé"
     );
   }
 

@@ -6,7 +6,6 @@ import {
   isPasswordExpired,
   validatePasswordComplexity,
   verifyPassword,
-  verifyTotpToken,
 } from "@/lib/admin-security";
 import { createAdminSession } from "@/lib/admin-session";
 import { Role, AuditSeverity } from "@prisma/client";
@@ -27,20 +26,16 @@ export async function POST(req: Request) {
   const csrfRejected = rejectIfInvalidCsrf(req);
   if (csrfRejected) return csrfRejected;
 
-  const { email, password, totp } = await req.json();
+  const { email, password } = await req.json();
 
-  if (
-    typeof email !== "string" ||
-    typeof password !== "string" ||
-    typeof totp !== "string"
-  ) {
+  if (typeof email !== "string" || typeof password !== "string") {
     await logAuditEvent("auth.login.failure", {
       actorEmailOverride: typeof email === "string" ? email : null,
       severity: AuditSeverity.warning,
       message: "Champs manquants ou invalides",
     });
     return NextResponse.json(
-      { error: "Email, mot de passe et code 2FA sont obligatoires" },
+      { error: "Email et mot de passe sont obligatoires" },
       { status: 400 }
     );
   }
@@ -58,7 +53,7 @@ export async function POST(req: Request) {
     where: { email: normalizedEmail },
   });
 
-  if (!user || user.role !== Role.admin || !user.passwordHash || !user.totpSecret) {
+  if (!user || user.role !== Role.admin || !user.passwordHash) {
     await logAuditEvent("auth.login.failure", {
       actorEmailOverride: normalizedEmail,
       severity: AuditSeverity.warning,
@@ -97,19 +92,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(
       { error: "Identifiants incorrects" },
-      { status: 401 }
-    );
-  }
-
-  const totpOk = verifyTotpToken(totp.trim(), user.totpSecret);
-  if (!totpOk) {
-    await logAuditEvent("auth.login.failure", {
-      actor: user,
-      severity: AuditSeverity.warning,
-      message: "Code TOTP invalide",
-    });
-    return NextResponse.json(
-      { error: "Code de second facteur invalide" },
       { status: 401 }
     );
   }

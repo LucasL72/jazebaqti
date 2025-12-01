@@ -22,10 +22,12 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import { usePathname, useRouter } from "next/navigation";
 import { ColorModeContext } from "./AppThemeProvider";
 import { useCsrfToken } from "@/lib/useCsrfToken";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 
 const navItems = [
   { label: "Accueil", href: "/" },
   { label: "Artiste", href: "/artist" },
+  { label: "Mes favoris", href: "/favorites" },
 ];
 
 export function GlobalNav() {
@@ -35,6 +37,7 @@ export function GlobalNav() {
   const pathname = usePathname();
   const colorMode = useContext(ColorModeContext);
   const { csrfToken, csrfError } = useCsrfToken();
+  const { user, loading: userLoading, refresh } = useCurrentUser();
 
   useEffect(() => {
     if (csrfError) {
@@ -53,6 +56,17 @@ export function GlobalNav() {
     });
     router.push("/admin/login");
     router.refresh();
+  };
+
+  const handleUserLogout = async () => {
+    if (!csrfToken) return;
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrfToken },
+      credentials: "same-origin",
+    });
+    refresh();
+    router.push("/");
   };
 
   const toggleDrawer = () => setOpen((prev) => !prev);
@@ -137,6 +151,16 @@ export function GlobalNav() {
           }}
         >
           <Stack spacing={1}>
+            {user && (
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {user.name || "Profil"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {user.email}
+                </Typography>
+              </Box>
+            )}
             <Button
               variant="text"
               onClick={colorMode.toggleColorMode}
@@ -154,6 +178,18 @@ export function GlobalNav() {
             {isAdmin && (
               <Button variant="text" color="error" onClick={handleLogout}>
                 Déconnexion
+              </Button>
+            )}
+            {!isAdmin && user && (
+              <Button variant="text" color="error" onClick={handleUserLogout}>
+                Se déconnecter
+              </Button>
+            )}
+            {!isAdmin && !user && (
+              <Button variant="contained" onClick={() => router.push("/login")}
+                disabled={userLoading}
+              >
+                Connexion / Inscription
               </Button>
             )}
           </Stack>
@@ -272,6 +308,16 @@ export function GlobalNav() {
               pt: 2,
             }}
           >
+            {user && (
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {user.name || "Profil"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {user.email}
+                </Typography>
+              </Box>
+            )}
             <Button
               variant="text"
               onClick={colorMode.toggleColorMode}
@@ -289,6 +335,18 @@ export function GlobalNav() {
             {isAdmin && (
               <Button variant="text" color="error" onClick={handleLogout}>
                 Déconnexion
+              </Button>
+            )}
+            {!isAdmin && user && (
+              <Button variant="text" color="error" onClick={handleUserLogout}>
+                Se déconnecter
+              </Button>
+            )}
+            {!isAdmin && !user && (
+              <Button variant="contained" onClick={() => router.push("/login")}
+                disabled={userLoading}
+              >
+                Connexion / Inscription
               </Button>
             )}
           </Stack>

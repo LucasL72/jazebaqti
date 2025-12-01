@@ -36,16 +36,6 @@ function requireSecret(name: string, minLength = 1) {
   return value.trim();
 }
 
-function requireHexSecret(name: string, minLength = 1) {
-  const value = requireSecret(name, minLength);
-  if (!/^([0-9a-f]{2})+$/i.test(value)) {
-    throw new Error(
-      `${name} doit être une chaîne hexadécimale (octets concaténés) pour la génération/validation TOTP.`
-    );
-  }
-  return value;
-}
-
 function optionalUrl(name: string) {
   const value = process.env[name];
   if (!value) return undefined;
@@ -93,7 +83,7 @@ export const env = {
   DATABASE_SSL_KEY: process.env.DATABASE_SSL_KEY,
   ADMIN_EMAIL: requireSecret("ADMIN_EMAIL", 5),
   ADMIN_PASSWORD: requireSecret("ADMIN_PASSWORD", 12),
-  ADMIN_TOTP_SECRET: requireHexSecret("ADMIN_TOTP_SECRET", 16),
+  ADMIN_TOTP_SECRET: process.env.ADMIN_TOTP_SECRET,
   MEDIA_SIGNING_SECRET: requireSecret("MEDIA_SIGNING_SECRET", 32),
   ADMIN_SESSION_MAX_AGE_SECONDS: parsePositiveNumber(
     process.env.ADMIN_SESSION_MAX_AGE_SECONDS,
