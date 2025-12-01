@@ -8,6 +8,7 @@ import { deleteMediaAtUrl } from "@/lib/media-storage";
 import path from "path";
 import { existsSync } from "fs";
 import { stat } from "fs/promises";
+import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 const LOCAL_WHITELIST = ["/audio/albums/", "/images/albums/"];
 
@@ -74,6 +75,9 @@ export async function PATCH(req: Request, context: RouteContext) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
+
   const { id: rawId } = await context.params;
   const id = Number(rawId);
 
@@ -129,6 +133,9 @@ export async function PATCH(req: Request, context: RouteContext) {
 export async function DELETE(_req: Request, context: RouteContext) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+
+  const csrfRejected = rejectIfInvalidCsrf(_req);
+  if (csrfRejected) return csrfRejected;
 
   const { id: rawId } = await context.params;
   const id = Number(rawId);

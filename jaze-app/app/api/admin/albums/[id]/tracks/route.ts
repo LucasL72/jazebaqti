@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/admin-session";
+import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 type RouteContext = {
   params: Promise<{
@@ -12,6 +13,9 @@ type RouteContext = {
 export async function POST(req: Request, context: RouteContext) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
 
   // 👉 On attend le Promise pour récupérer l'id
   const { id: rawId } = await context.params;

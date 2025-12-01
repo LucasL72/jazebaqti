@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteMediaAtUrl } from "@/lib/media-storage";
 import { requireAdminSession } from "@/lib/admin-session";
+import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 type Params = {
   params: {
@@ -13,6 +14,9 @@ type Params = {
 export async function PATCH(req: Request, { params }: Params) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
 
   const id = Number(params.id);
   if (Number.isNaN(id)) {
@@ -56,9 +60,12 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
 
   const id = Number(params.id);
   if (Number.isNaN(id)) {

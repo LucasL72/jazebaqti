@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -13,6 +13,9 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
+import { useCsrfToken } from "@/lib/useCsrfToken";
+import { validateFileInput } from "@/lib/file-validation";
+import { sanitizeTextInput, sanitizeUrlInput } from "@/lib/sanitizers";
 
 type TrackAdmin = {
   id: number;
@@ -59,8 +62,15 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const { csrfToken, csrfError } = useCsrfToken();
   const getErrorMessage = (err: unknown) =>
     err instanceof Error ? err.message : "Erreur inattendue";
+
+  useEffect(() => {
+    if (csrfError) {
+      setError(csrfError);
+    }
+  }, [csrfError]);
 
   // ---------- Upload helpers ----------
   async function uploadFile(
@@ -68,6 +78,9 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     type: "audio" | "image",
     extra: { albumId?: number } = {}
   ) {
+    if (!csrfToken) {
+      throw new Error("Protection CSRF non initialisée");
+    }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
@@ -78,6 +91,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     const res = await fetch("/api/admin/upload", {
       method: "POST",
       body: formData,
+      headers: { "X-CSRF-Token": csrfToken },
+      credentials: "same-origin",
     });
 
     if (!res.ok) {
@@ -94,15 +109,33 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     setError(null);
     setSavingAlbum(true);
 
+    if (!csrfToken) {
+      setError("Protection CSRF indisponible. Merci de rafraîchir le token.");
+      return;
+    }
+
+    const sanitizedTitle = sanitizeTextInput(title);
+    const sanitizedCoverUrl = sanitizeUrlInput(coverUrl);
+
+    if (!sanitizedTitle) {
+      setError("Le titre de l'album est obligatoire");
+      setSavingAlbum(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/admin/albums/${album.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
         body: JSON.stringify({
-          title,
+          title: sanitizedTitle,
           releaseYear: releaseYear ? Number(releaseYear) : null,
-          coverUrl: coverUrl || null,
+          coverUrl: sanitizedCoverUrl || null,
         }),
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
@@ -123,6 +156,13 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validationError = validateFileInput(file, "image");
+    if (validationError) {
+      setError(validationError);
+      e.target.value = "";
+      return;
+    }
+
     try {
       const url = await uploadFile(file, "image", { albumId: album.id });
       setCoverUrl(url);
@@ -138,7 +178,15 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     e.preventDefault();
     setError(null);
 
-    if (!newTrack.title.trim() || !newTrack.audioUrl.trim()) {
+    if (!csrfToken) {
+      setError("Protection CSRF indisponible. Merci de rafraîchir le token.");
+      return;
+    }
+
+    const sanitizedTitle = sanitizeTextInput(newTrack.title);
+    const sanitizedAudioUrl = sanitizeUrlInput(newTrack.audioUrl);
+
+    if (!sanitizedTitle || !sanitizedAudioUrl) {
       setError("Titre et audio sont obligatoires pour la piste");
       return;
     }
@@ -147,16 +195,20 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     try {
       const res = await fetch(`/api/admin/albums/${album.id}/tracks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
         body: JSON.stringify({
-          title: newTrack.title,
+          title: sanitizedTitle,
           trackNumber: newTrack.trackNumber,
           durationSeconds: newTrack.durationSeconds
             ? Number(newTrack.durationSeconds)
             : null,
-          audioUrl: newTrack.audioUrl,
+          audioUrl: sanitizedAudioUrl,
           isExplicit: newTrack.isExplicit,
         }),
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
@@ -189,6 +241,13 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const validationError = validateFileInput(file, "audio");
+    if (validationError) {
+      setError(validationError);
+      e.target.value = "";
+      return;
+    }
 
     try {
       const url = await uploadFile(file, "audio", { albumId: album.id });
@@ -223,20 +282,37 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     setError(null);
 
     try {
+      if (!csrfToken) {
+        setError("Protection CSRF indisponible. Merci de rafraîchir le token.");
+        return;
+      }
+
+      const sanitizedTitle = sanitizeTextInput(editingValues.title);
+      const sanitizedAudioUrl = sanitizeUrlInput(editingValues.audioUrl);
+
+      if (!sanitizedTitle || !sanitizedAudioUrl) {
+        setError("Titre et audio sont obligatoires pour la piste");
+        return;
+      }
+
       const res = await fetch(`/api/admin/tracks/${editingTrackId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
         body: JSON.stringify({
-          title: editingValues.title,
+          title: sanitizedTitle,
           trackNumber: editingValues.trackNumber
             ? Number(editingValues.trackNumber)
             : undefined,
           durationSeconds: editingValues.durationSeconds
             ? Number(editingValues.durationSeconds)
             : undefined,
-          audioUrl: editingValues.audioUrl,
+          audioUrl: sanitizedAudioUrl,
           isExplicit: editingValues.isExplicit,
         }),
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
@@ -263,6 +339,13 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validationError = validateFileInput(file, "audio");
+    if (validationError) {
+      setError(validationError);
+      e.target.value = "";
+      return;
+    }
+
     try {
       const url = await uploadFile(file, "audio", { albumId: album.id });
       setEditingValues((prev) => ({ ...prev, audioUrl: url }));
@@ -276,9 +359,15 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
   // ---------- Delete track ----------
   const deleteTrack = async (id: number) => {
     if (!window.confirm("Supprimer cette piste ?")) return;
+    if (!csrfToken) {
+      setError("Protection CSRF indisponible. Merci de rafraîchir le token.");
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/tracks/${id}`, {
         method: "DELETE",
+        headers: { "X-CSRF-Token": csrfToken },
+        credentials: "same-origin",
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

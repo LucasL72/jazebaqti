@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { logAuditEvent } from "@/lib/audit-log";
 import { AuditSeverity } from "@prisma/client";
 import { validateAndStoreMedia } from "@/lib/media-storage";
+import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 export async function POST(req: Request) {
   const rateLimited = await enforceRateLimit(req, {
@@ -15,6 +16,9 @@ export async function POST(req: Request) {
     throttleDelayMs: 500,
   });
   if (rateLimited) return rateLimited;
+
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
 
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;

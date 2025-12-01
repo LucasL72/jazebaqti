@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/admin-session";
 import { AuditSeverity, Role } from "@prisma/client";
 import { logAuditEvent } from "@/lib/audit-log";
+import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 type Params = {
   params: { id: string };
@@ -15,6 +16,9 @@ function isRole(value: string): value is Role {
 export async function PATCH(req: Request, { params }: Params) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+
+  const csrfRejected = rejectIfInvalidCsrf(req);
+  if (csrfRejected) return csrfRejected;
 
   const { role } = await req.json();
 
