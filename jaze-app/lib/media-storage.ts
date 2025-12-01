@@ -4,6 +4,7 @@ import path from "path";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { Readable } from "stream";
+import { env } from "./env";
 
 export type MediaType = "audio" | "image";
 
@@ -51,12 +52,7 @@ const EXTENSION_TO_MIME: Record<string, string> = {
 };
 
 function getSigningSecret() {
-  return (
-    process.env.MEDIA_SIGNING_SECRET ||
-    process.env.ADMIN_PASSWORD ||
-    process.env.ADMIN_TOTP_SECRET ||
-    "change-me"
-  );
+  return env.MEDIA_SIGNING_SECRET;
 }
 
 function slugify(input: string) {

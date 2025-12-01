@@ -5,6 +5,7 @@ import { enforceAdminPageAccess } from "@/lib/admin-session";
 import { AuditDashboardClient } from "./AuditDashboardClient";
 import { AuditAction } from "@/lib/audit-log";
 import { AuditSeverity, Role } from "@prisma/client";
+import { env } from "@/lib/env";
 
 export default async function AuditPage() {
   await enforceAdminPageAccess("/admin/audit");
@@ -37,10 +38,8 @@ export default async function AuditPage() {
     role: user.role as Role,
   }));
 
-  const slackEnabled = Boolean(process.env.SLACK_WEBHOOK_URL);
-  const emailEnabled = Boolean(
-    process.env.AUDIT_EMAIL_WEBHOOK_URL && process.env.AUDIT_ALERT_EMAILS
-  );
+  const slackEnabled = Boolean(env.SLACK_WEBHOOK_URL);
+  const emailEnabled = Boolean(env.AUDIT_EMAIL_WEBHOOK_URL && env.AUDIT_ALERT_EMAILS);
 
   return (
     <div className="main-shell">
