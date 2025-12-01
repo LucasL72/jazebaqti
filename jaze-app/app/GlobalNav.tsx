@@ -101,6 +101,16 @@ export function GlobalNav() {
                 </Typography>
               </Link>
             )}
+            {isAdmin && (
+              <Link href="/admin/audit" style={{ textDecoration: "none" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ "&:hover": { textDecoration: "underline" } }}
+                >
+                  Audit & alertes
+                </Typography>
+              </Link>
+            )}
           </Stack>
         </Box>
 
@@ -224,6 +234,17 @@ export function GlobalNav() {
               >
                 <ListItemButton>
                   <ListItemText primary="Albums (admin)" />
+                </ListItemButton>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin/audit"
+                onClick={closeDrawer}
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <ListItemButton>
+                  <ListItemText primary="Audit & alertes" />
                 </ListItemButton>
               </Link>
             )}

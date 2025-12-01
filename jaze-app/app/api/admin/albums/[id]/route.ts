@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import path from "path";
 import { unlink } from "fs/promises";
 import { requireAdminSession } from "@/lib/admin-session";
+import { logAuditEvent } from "@/lib/audit-log";
+import { AuditSeverity } from "@prisma/client";
 
 type RouteContext = {
   params: Promise<{
@@ -156,6 +158,18 @@ export async function DELETE(_req: Request, context: RouteContext) {
     // 3) supprimer les données en base
     await prisma.track.deleteMany({ where: { albumId: id } });
     await prisma.album.delete({ where: { id } });
+
+    await logAuditEvent("album.delete", {
+      actor: session.user,
+      severity:
+        album.tracks.length >= 5 ? AuditSeverity.critical : AuditSeverity.warning,
+      message: `Suppression album ${album.title}`,
+      metadata: {
+        albumId: album.id,
+        title: album.title,
+        tracksDeleted: album.tracks.length,
+      },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
