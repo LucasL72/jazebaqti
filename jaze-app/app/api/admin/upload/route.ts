@@ -4,8 +4,18 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { requireAdminSession } from "@/lib/admin-session";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const rateLimited = await enforceRateLimit(req, {
+    key: "admin-upload",
+    limit: 25,
+    windowMs: 10 * 60 * 1000,
+    throttleAfter: 10,
+    throttleDelayMs: 500,
+  });
+  if (rateLimited) return rateLimited;
+
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 

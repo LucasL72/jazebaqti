@@ -2,8 +2,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/admin-session";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const rateLimited = await enforceRateLimit(req, {
+    key: "admin-albums",
+    limit: 50,
+    windowMs: 10 * 60 * 1000,
+    throttleAfter: 25,
+    throttleDelayMs: 200,
+  });
+  if (rateLimited) return rateLimited;
+
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
