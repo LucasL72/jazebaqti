@@ -4,6 +4,7 @@ import { GlobalNav } from "@/app/GlobalNav";
 import { PlayerBar } from "@/app/PlayerBar";
 import { AdminAlbumDetailClient } from "./AdminAlbumDetailClient";
 import { notFound } from "next/navigation";
+import { enforceAdminPageAccess } from "@/lib/admin-session";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -16,6 +17,8 @@ export default async function AdminAlbumDetailPage({ params }: PageProps) {
   if (!rawId || Number.isNaN(id)) {
     notFound();
   }
+
+  await enforceAdminPageAccess(`/admin/albums/${rawId}`);
 
   const album = await prisma.album.findUnique({
     where: { id },

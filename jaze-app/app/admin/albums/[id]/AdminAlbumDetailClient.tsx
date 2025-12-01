@@ -59,6 +59,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const getErrorMessage = (err: unknown) =>
+    err instanceof Error ? err.message : "Erreur inattendue";
 
   // ---------- Upload helpers ----------
   async function uploadFile(file: File, type: "audio" | "image") {
@@ -101,8 +103,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
         setError(data.error || "Erreur mise à jour album");
         return;
       }
-    } catch (err) {
-      setError("Erreur réseau lors de la mise à jour");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setSavingAlbum(false);
     }
@@ -117,8 +119,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     try {
       const url = await uploadFile(file, "image");
       setCoverUrl(url);
-    } catch (err: any) {
-      setError(err.message || "Erreur upload cover");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       e.target.value = "";
     }
@@ -168,8 +170,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
         audioUrl: "",
         isExplicit: false,
       });
-    } catch (err) {
-      setError("Erreur réseau création piste");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setCreatingTrack(false);
     }
@@ -184,8 +186,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     try {
       const url = await uploadFile(file, "audio");
       setNewTrack((prev) => ({ ...prev, audioUrl: url }));
-    } catch (err: any) {
-      setError(err.message || "Erreur upload audio piste");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       e.target.value = "";
     }
@@ -243,8 +245,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
           .sort((a, b) => a.trackNumber - b.trackNumber)
       );
       setEditingTrackId(null);
-    } catch (err) {
-      setError("Erreur réseau mise à jour piste");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -257,8 +259,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
     try {
       const url = await uploadFile(file, "audio");
       setEditingValues((prev) => ({ ...prev, audioUrl: url }));
-    } catch (err: any) {
-      setError(err.message || "Erreur upload audio piste");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       e.target.value = "";
     }
@@ -277,8 +279,8 @@ export function AdminAlbumDetailClient({ album }: { album: AlbumAdminDetail }) {
         return;
       }
       setTracks((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
-      alert("Erreur réseau suppression piste");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 

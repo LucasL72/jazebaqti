@@ -1,8 +1,12 @@
 // app/api/admin/albums/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/admin-session";
 
 export async function POST(req: Request) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   try {
     const body = await req.json();
     const { title, releaseYear, coverUrl } = body;

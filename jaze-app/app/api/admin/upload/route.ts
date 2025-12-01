@@ -3,8 +3,12 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
+import { requireAdminSession } from "@/lib/admin-session";
 
 export async function POST(req: Request) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const type = formData.get("type") as string | null; // "audio" | "image"

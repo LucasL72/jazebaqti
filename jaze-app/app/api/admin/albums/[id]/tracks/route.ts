@@ -1,6 +1,7 @@
 // app/api/admin/albums/[id]/tracks/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/admin-session";
 
 type RouteContext = {
   params: Promise<{
@@ -9,6 +10,9 @@ type RouteContext = {
 };
 
 export async function POST(req: Request, context: RouteContext) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   // 👉 On attend le Promise pour récupérer l'id
   const { id: rawId } = await context.params;
   const albumId = Number(rawId);
