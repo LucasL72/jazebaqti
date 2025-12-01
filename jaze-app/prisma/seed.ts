@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import { hashPassword, validatePasswordComplexity } from "../lib/admin-security";
 
 const prisma = new PrismaClient();
@@ -25,7 +25,7 @@ async function main() {
         passwordHash,
         totpSecret: adminTotpSecret,
         totpEnabled: true,
-        role: "admin",
+        role: Role.admin,
         passwordUpdatedAt: new Date(),
       },
       create: {
@@ -34,7 +34,7 @@ async function main() {
         passwordHash,
         totpSecret: adminTotpSecret,
         totpEnabled: true,
-        role: "admin",
+        role: Role.admin,
         passwordUpdatedAt: new Date(),
       },
     });

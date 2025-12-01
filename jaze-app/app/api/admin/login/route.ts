@@ -9,6 +9,7 @@ import {
   verifyTotpToken,
 } from "@/lib/admin-security";
 import { createAdminSession } from "@/lib/admin-session";
+import { Role } from "@prisma/client";
 
 export async function POST(req: Request) {
   const { email, password, totp } = await req.json();
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     where: { email: normalizedEmail },
   });
 
-  if (!user || user.role !== "admin" || !user.passwordHash || !user.totpSecret) {
+  if (!user || user.role !== Role.admin || !user.passwordHash || !user.totpSecret) {
     return NextResponse.json(
       { error: "Identifiants incorrects" },
       { status: 401 }
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
     );
   }
 
-  await createAdminSession(user.id);
+  await createAdminSession(user.id, user.role);
 
   return NextResponse.json({ ok: true });
 }
