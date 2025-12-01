@@ -39,6 +39,9 @@ export function AdminAlbumsClient({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
 
+  const getErrorMessage = (err: unknown) =>
+    err instanceof Error ? err.message : "Erreur inattendue";
+
   // Helper d’upload pour la cover (image)
   async function uploadFile(file: File) {
     const formData = new FormData();
@@ -70,8 +73,8 @@ export function AdminAlbumsClient({
     try {
       const url = await uploadFile(file);
       setCoverUrl(url); // on pré-remplit le champ Cover URL avec le résultat
-    } catch (err: any) {
-      setError(err.message || "Erreur upload cover");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setUploadingCover(false);
       e.target.value = "";
@@ -124,8 +127,8 @@ export function AdminAlbumsClient({
       setCoverUrl("");
       // On pourrait router vers la page détail directement, si tu veux :
       // router.push(`/admin/albums/${created.id}`);
-    } catch (err) {
-      setError("Erreur réseau");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setCreating(false);
     }
@@ -147,8 +150,8 @@ export function AdminAlbumsClient({
       }
 
       setAlbums((prev) => prev.filter((a) => a.id !== id));
-    } catch (err) {
-      alert("Erreur réseau");
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     } finally {
       setDeletingId(null);
     }

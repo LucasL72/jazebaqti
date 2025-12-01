@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import path from "path";
 import { unlink } from "fs/promises";
+import { requireAdminSession } from "@/lib/admin-session";
 
 function isLocalMediaUrl(url: string | null | undefined) {
   if (!url) return false;
@@ -16,9 +17,14 @@ async function deleteLocalFileIfExists(url: string | null | undefined) {
 
   try {
     await unlink(fsPath);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Si le fichier n'existe pas, on ignore
-    if (err && err.code !== "ENOENT") {
+    type WithCode = { code?: string };
+    const code =
+      typeof err === "object" && err && "code" in err
+        ? (err as WithCode).code
+        : null;
+    if (code !== "ENOENT") {
       console.error("Erreur lors de la suppression du fichier:", fsPath, err);
     }
   }
@@ -31,6 +37,9 @@ type Params = {
 };
 
 export async function PATCH(req: Request, { params }: Params) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   const id = Number(params.id);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "ID piste invalide" }, { status: 400 });
@@ -74,6 +83,9 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_: Request, { params }: Params) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   const id = Number(params.id);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "ID piste invalide" }, { status: 400 });

@@ -1,9 +1,50 @@
 import { PrismaClient } from "@prisma/client";
+import { hashPassword, validatePasswordComplexity } from "../lib/admin-security";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminTotpSecret = process.env.ADMIN_TOTP_SECRET;
+
+  if (adminEmail && adminPassword && adminTotpSecret) {
+    if (!validatePasswordComplexity(adminPassword)) {
+      throw new Error(
+        "ADMIN_PASSWORD ne respecte pas la politique de complexité (12+ car., majuscules, minuscules, chiffres, caractère spécial)."
+      );
+    }
+
+    const passwordHash = await hashPassword(adminPassword);
+
+    await prisma.user.upsert({
+      where: { email: adminEmail.toLowerCase() },
+      update: {
+        passwordHash,
+        totpSecret: adminTotpSecret,
+        totpEnabled: true,
+        role: "admin",
+        passwordUpdatedAt: new Date(),
+      },
+      create: {
+        email: adminEmail.toLowerCase(),
+        name: "Administrateur",
+        passwordHash,
+        totpSecret: adminTotpSecret,
+        totpEnabled: true,
+        role: "admin",
+        passwordUpdatedAt: new Date(),
+      },
+    });
+
+    console.log("✅ Compte administrateur provisionné avec 2FA");
+  } else {
+    console.warn(
+      "⚠️ Variables ADMIN_EMAIL/ADMIN_PASSWORD/ADMIN_TOTP_SECRET manquantes : aucun compte admin créé"
+    );
+  }
 
   // 1. L'artiste
   const jaze = await prisma.artist.create({

@@ -3,8 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { GlobalNav } from "@/app/GlobalNav";
 import { PlayerBar } from "@/app/PlayerBar";
 import { AdminAlbumsClient } from "./AdminAlbumsClient";
+import { enforceAdminPageAccess } from "@/lib/admin-session";
 
 export default async function AdminAlbumsPage() {
+  await enforceAdminPageAccess("/admin/albums");
+
   const albums = await prisma.album.findMany({
     include: {
       _count: {

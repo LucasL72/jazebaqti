@@ -1,33 +1,78 @@
 // app/api/admin/login/route.ts
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import {
+  ADMIN_PASSWORD_POLICY_MESSAGE,
+  isPasswordExpired,
+  validatePasswordComplexity,
+  verifyPassword,
+  verifyTotpToken,
+} from "@/lib/admin-security";
+import { createAdminSession } from "@/lib/admin-session";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const { email, password, totp } = await req.json();
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-
-  if (!adminEmail || !adminPassword) {
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    typeof totp !== "string"
+  ) {
     return NextResponse.json(
-      { error: "Admin credentials not configured" },
-      { status: 500 }
+      { error: "Email, mot de passe et code 2FA sont obligatoires" },
+      { status: 400 }
     );
   }
 
-  if (email === adminEmail && password === adminPassword) {
-    const res = NextResponse.json({ ok: true });
-
-    res.cookies.set("admin_logged_in", "true", {
-      httpOnly: true,
-      path: "/",
-      // tu peux ajouter secure: true et sameSite en prod
-    });
-
-    return res;
+  if (!validatePasswordComplexity(password)) {
+    return NextResponse.json(
+      { error: `Mot de passe non conforme (${ADMIN_PASSWORD_POLICY_MESSAGE})` },
+      { status: 400 }
+    );
   }
 
-  return NextResponse.json(
-    { error: "Identifiants incorrects" },
-    { status: 401 }
-  );
+  const normalizedEmail = email.toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (!user || user.role !== "admin" || !user.passwordHash || !user.totpSecret) {
+    return NextResponse.json(
+      { error: "Identifiants incorrects" },
+      { status: 401 }
+    );
+  }
+
+  if (isPasswordExpired(user.passwordUpdatedAt)) {
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+
+    return NextResponse.json(
+      {
+        error:
+          "Mot de passe expiré : rotation obligatoire avant une nouvelle connexion.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const passwordOk = await verifyPassword(password, user.passwordHash);
+  if (!passwordOk) {
+    return NextResponse.json(
+      { error: "Identifiants incorrects" },
+      { status: 401 }
+    );
+  }
+
+  const totpOk = verifyTotpToken(totp.trim(), user.totpSecret);
+  if (!totpOk) {
+    return NextResponse.json(
+      { error: "Code de second facteur invalide" },
+      { status: 401 }
+    );
+  }
+
+  await createAdminSession(user.id);
+
+  return NextResponse.json({ ok: true });
 }

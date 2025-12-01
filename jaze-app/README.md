@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Admin security setup
+
+The admin area is protected by database-backed sessions, short-lived cookies, and mandatory 2FA (TOTP). Configure the following environment variables before running migrations or `npm run seed`:
+
+- `ADMIN_EMAIL`: admin login email (stored in lowercase).
+- `ADMIN_PASSWORD`: strong password (12+ chars, upper/lower case, digit, special).
+- `ADMIN_TOTP_SECRET`: hex-encoded 2FA secret (generate with `openssl rand -hex 20`).
+- `ADMIN_SESSION_MAX_AGE_SECONDS` (optional): session lifetime (default 1800s).
+- `ADMIN_PASSWORD_MAX_AGE_DAYS` (optional): password rotation window (default 90 days).
+
+Running the seed will upsert the admin user with the hashed password, TOTP secret, and enforce the password policy. Session cookies are `httpOnly`, `secure`, and `sameSite="lax"`, and sessions are invalidated server-side when expired or revoked.

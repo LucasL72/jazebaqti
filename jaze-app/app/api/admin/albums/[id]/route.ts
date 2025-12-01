@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import path from "path";
 import { unlink } from "fs/promises";
+import { requireAdminSession } from "@/lib/admin-session";
 
 type RouteContext = {
   params: Promise<{
@@ -23,8 +24,13 @@ async function deleteLocalFileIfExists(url: string | null | undefined) {
 
   try {
     await unlink(fsPath);
-  } catch (err: any) {
-    if (err && err.code !== "ENOENT") {
+  } catch (err: unknown) {
+    type WithCode = { code?: string };
+    const code =
+      typeof err === "object" && err && "code" in err
+        ? (err as WithCode).code
+        : null;
+    if (code !== "ENOENT") {
       console.error("Erreur lors de la suppression du fichier:", fsPath, err);
     }
   }
@@ -32,6 +38,9 @@ async function deleteLocalFileIfExists(url: string | null | undefined) {
 
 // ---------- GET : un album + ses pistes ----------
 export async function GET(_req: Request, context: RouteContext) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   const { id: rawId } = await context.params;
   const id = Number(rawId);
 
@@ -61,6 +70,9 @@ export async function GET(_req: Request, context: RouteContext) {
 
 // ---------- PATCH : update titre / année / cover ----------
 export async function PATCH(req: Request, context: RouteContext) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   const { id: rawId } = await context.params;
   const id = Number(rawId);
 
@@ -113,6 +125,9 @@ export async function PATCH(req: Request, context: RouteContext) {
 
 // ---------- DELETE : supprimer album + pistes + fichiers ----------
 export async function DELETE(_req: Request, context: RouteContext) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
   const { id: rawId } = await context.params;
   const id = Number(rawId);
 

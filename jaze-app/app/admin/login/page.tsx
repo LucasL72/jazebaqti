@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Button,
@@ -13,10 +13,17 @@ import {
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("votre@email.com");
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/admin/albums";
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const passwordPolicy =
+    "12+ caractères, avec majuscules, minuscules, chiffres et caractère spécial";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +34,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, totp }),
       });
 
       if (!res.ok) {
@@ -36,10 +43,11 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.push("/admin/albums");
+      router.push(callbackUrl || "/admin/albums");
       router.refresh();
-    } catch (err) {
-      setError("Erreur réseau");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur réseau";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -89,6 +97,19 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
+            <TextField
+              label="Code TOTP (2FA)"
+              type="text"
+              inputMode="numeric"
+              fullWidth
+              value={totp}
+              onChange={(e) => setTotp(e.target.value)}
+              helperText="Code généré par votre application d'authentification"
+            />
+
+            <Typography variant="caption" color="text.secondary">
+              Politique mot de passe : {passwordPolicy}
+            </Typography>
 
             {error && (
               <Typography variant="body2" color="error">
