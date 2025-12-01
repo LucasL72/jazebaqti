@@ -10,8 +10,18 @@ import {
 } from "@/lib/admin-security";
 import { createAdminSession } from "@/lib/admin-session";
 import { Role } from "@prisma/client";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const rateLimited = await enforceRateLimit(req, {
+    key: "admin-login",
+    limit: 5,
+    windowMs: 60_000,
+    throttleAfter: 3,
+    throttleDelayMs: 400,
+  });
+  if (rateLimited) return rateLimited;
+
   const { email, password, totp } = await req.json();
 
   if (
