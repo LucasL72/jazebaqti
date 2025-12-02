@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Typography } from "@mui/material";
 import { PlayerBar } from "./PlayerBar";
 import { GlobalNav } from "./GlobalNav";
-import { AlbumGrid } from "./AlbumGrid";
+import { AlbumSearch } from "./AlbumSearch";
 
 export default async function HomePage() {
   const albums = await prisma.album.findMany({
@@ -54,7 +54,7 @@ export default async function HomePage() {
           vinyle animé et player global persistant.
         </Typography>
 
-        <AlbumGrid albums={albumsForGrid} />
+        <AlbumSearch albums={albumsForGrid} />
       </main>
 
       {/* Player global persistant */}
