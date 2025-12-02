@@ -19,6 +19,8 @@ export type TrackInfo = {
   albumCoverUrl: string | null;
 };
 
+export type RepeatMode = "none" | "one" | "all";
+
 type PlayerContextType = {
   currentTrack: TrackInfo | null;
   queue: TrackInfo[];
@@ -29,12 +31,16 @@ type PlayerContextType = {
   progress: number;
   duration: number;
   error: string | null;
+  shuffle: boolean;
+  repeat: RepeatMode;
   playTrackList: (tracks: TrackInfo[], startIndex: number) => void;
   togglePlayPause: () => void;
   playNext: () => void;
   playPrev: () => void;
   setVolume: (value: number) => void;
   seek: (seconds: number) => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -51,6 +57,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatMode>("none");
+
+  // Garde la queue originale pour pouvoir désactiver le shuffle
+  const originalQueueRef = useRef<TrackInfo[]>([]);
 
   // ⚡ Charge et lance la piste
   const loadAndPlay = (tracks: TrackInfo[], index: number) => {
@@ -82,7 +93,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
 
   const playTrackList = (tracks: TrackInfo[], startIndex: number) => {
-    loadAndPlay(tracks, startIndex);
+    // Sauvegarde la queue originale
+    originalQueueRef.current = tracks;
+
+    // Si shuffle est activé, mélange la queue
+    if (shuffle) {
+      const shuffledTracks = [...tracks];
+      // Algorithme de Fisher-Yates
+      for (let i = shuffledTracks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledTracks[i], shuffledTracks[j]] = [
+          shuffledTracks[j],
+          shuffledTracks[i],
+        ];
+      }
+      loadAndPlay(shuffledTracks, 0);
+    } else {
+      loadAndPlay(tracks, startIndex);
+    }
   };
 
   const togglePlayPause = () => {
@@ -121,9 +149,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current;
     if (!audio || queue.length === 0) return;
 
+    // Mode repeat = "one" : rejoue la même piste
+    if (repeat === "one") {
+      audio.currentTime = 0;
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.error("Erreur de lecture:", err);
+          setError("Impossible de répéter ce titre");
+        });
+      return;
+    }
+
+    // Si on n'est pas à la fin de la queue
     if (currentIndex < queue.length - 1) {
       loadAndPlay(queue, currentIndex + 1);
+    } else if (repeat === "all") {
+      // Mode repeat = "all" : reboucle au début
+      loadAndPlay(queue, 0);
     } else {
+      // Mode repeat = "none" : arrête la lecture
       setIsPlaying(false);
     }
   };
@@ -169,6 +215,50 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const clamped = Math.min(duration, Math.max(0, seconds));
     audio.currentTime = clamped;
     setProgress(clamped);
+  };
+
+  const toggleShuffle = () => {
+    if (!shuffle && queue.length > 0) {
+      // Activation du shuffle : mélange la queue
+      const shuffledTracks = [...queue];
+      // Garde la piste actuelle en première position
+      if (currentTrack && currentIndex >= 0) {
+        // Retire la piste actuelle
+        shuffledTracks.splice(currentIndex, 1);
+        // Mélange le reste avec Fisher-Yates
+        for (let i = shuffledTracks.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledTracks[i], shuffledTracks[j]] = [
+            shuffledTracks[j],
+            shuffledTracks[i],
+          ];
+        }
+        // Remet la piste actuelle au début
+        shuffledTracks.unshift(currentTrack);
+        setQueue(shuffledTracks);
+        setCurrentIndex(0);
+      }
+      setShuffle(true);
+    } else if (shuffle && originalQueueRef.current.length > 0) {
+      // Désactivation du shuffle : revient à la queue originale
+      const originalQueue = originalQueueRef.current;
+      setQueue(originalQueue);
+      // Retrouve l'index de la piste actuelle dans la queue originale
+      if (currentTrack) {
+        const newIndex = originalQueue.findIndex((t) => t.id === currentTrack.id);
+        setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+      }
+      setShuffle(false);
+    }
+  };
+
+  const toggleRepeat = () => {
+    // Cycle : none -> all -> one -> none
+    setRepeat((prev) => {
+      if (prev === "none") return "all";
+      if (prev === "all") return "one";
+      return "none";
+    });
   };
 
   // 🎚 Suivi du temps / durée / fin de piste
@@ -221,12 +311,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     progress,
     duration,
     error,
+    shuffle,
+    repeat,
     playTrackList,
     togglePlayPause,
     playNext,
     playPrev,
     setVolume,
     seek,
+    toggleShuffle,
+    toggleRepeat,
   };
 
   return (
