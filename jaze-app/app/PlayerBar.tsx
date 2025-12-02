@@ -15,9 +15,11 @@ export function PlayerBar() {
   const {
     currentTrack,
     isPlaying,
+    isLoading,
     volume,
     progress,
     duration,
+    error,
     togglePlayPause,
     playNext,
     playPrev,
@@ -89,7 +91,7 @@ export function PlayerBar() {
                   : "Aucune lecture"}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
-                {currentTrack?.albumTitle ?? ""}
+                {error ? error : currentTrack?.albumTitle ?? ""}
               </Typography>
             </Box>
           </Stack>
@@ -101,9 +103,15 @@ export function PlayerBar() {
             justifyContent="center"
             sx={{ width: { xs: "100%", sm: "33%" } }}
           >
-            <Button onClick={playPrev}>⏮</Button>
-            <Button onClick={togglePlayPause}>{isPlaying ? "⏸" : "▶"}</Button>
-            <Button onClick={playNext}>⏭</Button>
+            <Button onClick={playPrev} disabled={isLoading}>
+              ⏮
+            </Button>
+            <Button onClick={togglePlayPause} disabled={isLoading}>
+              {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
+            </Button>
+            <Button onClick={playNext} disabled={isLoading}>
+              ⏭
+            </Button>
           </Stack>
 
           {/* Volume */}
