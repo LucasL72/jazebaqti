@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "convert:opus": "./scripts/convert-to-opus.sh public/audio public/audio"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
