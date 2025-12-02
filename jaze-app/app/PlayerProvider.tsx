@@ -24,9 +24,11 @@ type PlayerContextType = {
   queue: TrackInfo[];
   currentIndex: number;
   isPlaying: boolean;
+  isLoading: boolean;
   volume: number;
   progress: number;
   duration: number;
+  error: string | null;
   playTrackList: (tracks: TrackInfo[], startIndex: number) => void;
   togglePlayPause: () => void;
   playNext: () => void;
@@ -44,9 +46,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [currentTrack, setCurrentTrack] = useState<TrackInfo | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolumeState] = useState(1);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   // ⚡ Charge et lance la piste
   const loadAndPlay = (tracks: TrackInfo[], index: number) => {
@@ -58,14 +62,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setQueue(tracks);
     setCurrentIndex(index);
     setCurrentTrack(track);
+    setIsLoading(true);
+    setError(null);
 
     audio.src = track.audioUrl;
-    audio.volume = volume;
 
     audio
       .play()
-      .then(() => setIsPlaying(true))
-      .catch(console.error);
+      .then(() => {
+        setIsPlaying(true);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Erreur de lecture:", err);
+        setError("Impossible de lire ce titre");
+        setIsPlaying(false);
+        setIsLoading(false);
+      });
   };
 
   const playTrackList = (tracks: TrackInfo[], startIndex: number) => {
@@ -87,13 +100,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.pause();
       setIsPlaying(false);
     } else {
+      setIsLoading(true);
+      setError(null);
       audio
         .play()
         .then(() => {
-          audio.volume = volume;
           setIsPlaying(true);
+          setIsLoading(false);
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error("Erreur de lecture:", err);
+          setError("Impossible de reprendre la lecture");
+          setIsPlaying(false);
+          setIsLoading(false);
+        });
     }
   };
 
@@ -116,13 +136,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       loadAndPlay(queue, currentIndex - 1);
     } else if (currentIndex === 0 && currentTrack) {
       audio.currentTime = 0;
+      setIsLoading(true);
+      setError(null);
       audio
         .play()
         .then(() => {
-          audio.volume = volume;
           setIsPlaying(true);
+          setIsLoading(false);
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error("Erreur de lecture:", err);
+          setError("Impossible de relire ce titre");
+          setIsPlaying(false);
+          setIsLoading(false);
+        });
     }
   };
 
@@ -170,17 +197,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue.length, currentIndex]);
+  }, [playNext]);
+
+  // 🧹 Cleanup à la destruction du composant
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+    };
+  }, []);
 
   const value: PlayerContextType = {
     currentTrack,
     queue,
     currentIndex,
     isPlaying,
+    isLoading,
     volume,
     progress,
     duration,
+    error,
     playTrackList,
     togglePlayPause,
     playNext,
