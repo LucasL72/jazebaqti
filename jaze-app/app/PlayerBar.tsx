@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import { usePlayer } from "./PlayerProvider";
-import { Box, Button, Slider, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  IconButton,
+  Slider,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 
 function formatTime(seconds: number) {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -20,11 +28,15 @@ export function PlayerBar() {
     progress,
     duration,
     error,
+    shuffle,
+    repeat,
     togglePlayPause,
     playNext,
     playPrev,
     setVolume,
     seek,
+    toggleShuffle,
+    toggleRepeat,
   } = usePlayer();
 
   const coverUrl = currentTrack?.albumCoverUrl ?? null;
@@ -99,19 +111,62 @@ export function PlayerBar() {
           {/* Boutons */}
           <Stack
             direction="row"
-            spacing={2}
+            spacing={{ xs: 0.5, sm: 1 }}
             justifyContent="center"
+            alignItems="center"
             sx={{ width: { xs: "100%", sm: "33%" } }}
           >
-            <Button onClick={playPrev} disabled={isLoading}>
+            {/* Shuffle */}
+            <Tooltip
+              title={shuffle ? "Shuffle activé" : "Activer le shuffle"}
+              arrow
+            >
+              <IconButton
+                onClick={toggleShuffle}
+                disabled={isLoading}
+                size="small"
+                sx={{
+                  color: shuffle ? "primary.main" : "text.secondary",
+                  opacity: shuffle ? 1 : 0.5,
+                }}
+              >
+                🔀
+              </IconButton>
+            </Tooltip>
+
+            <Button onClick={playPrev} disabled={isLoading} size="small">
               ⏮
             </Button>
             <Button onClick={togglePlayPause} disabled={isLoading}>
               {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
             </Button>
-            <Button onClick={playNext} disabled={isLoading}>
+            <Button onClick={playNext} disabled={isLoading} size="small">
               ⏭
             </Button>
+
+            {/* Repeat */}
+            <Tooltip
+              title={
+                repeat === "none"
+                  ? "Répétition désactivée"
+                  : repeat === "all"
+                    ? "Répéter la file"
+                    : "Répéter le titre"
+              }
+              arrow
+            >
+              <IconButton
+                onClick={toggleRepeat}
+                disabled={isLoading}
+                size="small"
+                sx={{
+                  color: repeat !== "none" ? "primary.main" : "text.secondary",
+                  opacity: repeat !== "none" ? 1 : 0.5,
+                }}
+              >
+                {repeat === "one" ? "🔂" : "🔁"}
+              </IconButton>
+            </Tooltip>
           </Stack>
 
           {/* Volume */}
