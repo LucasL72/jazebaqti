@@ -1,6 +1,8 @@
+import { FILE_SIZE_LIMITS } from "./constants";
+
 const MAX_SIZES = {
-  image: 10 * 1024 * 1024, // 10 MB
-  audio: 40 * 1024 * 1024, // 40 MB
+  image: FILE_SIZE_LIMITS.IMAGE,
+  audio: FILE_SIZE_LIMITS.AUDIO,
 };
 
 const ALLOWED_TYPES: Record<"image" | "audio", string[]> = {

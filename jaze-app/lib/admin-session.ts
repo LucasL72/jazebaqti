@@ -43,15 +43,18 @@ export async function createAdminSession(userId: string, role: Role) {
   const hashed = hashToken(token);
   const expires = new Date(Date.now() + getSessionMaxAgeSeconds() * 1000);
 
-  await prisma.session.deleteMany({ where: { userId } });
-  await prisma.session.create({
-    data: {
-      userId,
-      sessionToken: hashed,
-      expires,
-      role,
-    },
-  });
+  // Use transaction to prevent race condition: ensure session is created before deleting old ones
+  await prisma.$transaction([
+    prisma.session.deleteMany({ where: { userId } }),
+    prisma.session.create({
+      data: {
+        userId,
+        sessionToken: hashed,
+        expires,
+        role,
+      },
+    }),
+  ]);
 
   const cookieStore = cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, serializeSessionCookie(token, role), {

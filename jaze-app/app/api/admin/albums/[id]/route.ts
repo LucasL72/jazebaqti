@@ -9,6 +9,7 @@ import path from "path";
 import { existsSync } from "fs";
 import { stat } from "fs/promises";
 import { rejectIfInvalidCsrf } from "@/lib/csrf";
+import { updateAlbumSchema, validateSchema } from "@/lib/validation-schemas";
 
 const LOCAL_WHITELIST = ["/audio/albums/", "/images/albums/"];
 
@@ -87,7 +88,17 @@ export async function PATCH(req: Request, context: RouteContext) {
 
   try {
     const body = await req.json();
-    const { title, releaseYear, coverUrl } = body;
+
+    // Validate input with Zod
+    const validation = validateSchema(updateAlbumSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Données invalides", details: validation.errors },
+        { status: 400 }
+      );
+    }
+
+    const { title, releaseYear, coverUrl } = validation.data;
 
     const existing = await prisma.album.findUnique({
       where: { id },
@@ -97,18 +108,11 @@ export async function PATCH(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Album introuvable" }, { status: 404 });
     }
 
-    const year =
-      typeof releaseYear === "number"
-        ? releaseYear
-        : releaseYear
-        ? Number(releaseYear)
-        : null;
-
     const updated = await prisma.album.update({
       where: { id },
       data: {
         title,
-        releaseYear: Number.isNaN(year) ? null : year,
+        releaseYear: releaseYear ?? null,
         coverUrl: coverUrl ?? null,
       },
     });
@@ -154,15 +158,20 @@ export async function DELETE(_req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Album introuvable" }, { status: 404 });
     }
 
-    // 1) supprimer les fichiers audio locaux des pistes
-    for (const track of album.tracks) {
-      await deleteMediaAtUrl(track.audioUrl);
-      await deleteLegacyLocalFile(track.audioUrl);
-    }
+    // 1) supprimer les fichiers audio locaux des pistes en parallèle
+    const trackDeletionPromises = album.tracks.flatMap((track) => [
+      deleteMediaAtUrl(track.audioUrl),
+      deleteLegacyLocalFile(track.audioUrl),
+    ]);
 
     // 2) supprimer la cover locale si besoin
-    await deleteMediaAtUrl(album.coverUrl);
-    await deleteLegacyLocalFile(album.coverUrl);
+    const coverDeletionPromises = [
+      deleteMediaAtUrl(album.coverUrl),
+      deleteLegacyLocalFile(album.coverUrl),
+    ];
+
+    // Execute all deletions in parallel
+    await Promise.all([...trackDeletionPromises, ...coverDeletionPromises]);
 
     // 3) supprimer les données en base
     await prisma.track.deleteMany({ where: { albumId: id } });
