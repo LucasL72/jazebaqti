@@ -6,6 +6,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { logAuditEvent } from "@/lib/audit-log";
 import { AuditSeverity } from "@prisma/client";
 import { rejectIfInvalidCsrf } from "@/lib/csrf";
+import { createAlbumSchema, validateSchema } from "@/lib/validation-schemas";
 
 export async function POST(req: Request) {
   const rateLimited = await enforceRateLimit(req, {
@@ -25,14 +26,17 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { title, releaseYear, coverUrl } = body;
 
-    if (!title) {
+    // Validate input with Zod
+    const validation = validateSchema(createAlbumSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Le titre est obligatoire" },
+        { error: "Données invalides", details: validation.errors },
         { status: 400 }
       );
     }
+
+    const { title, releaseYear, coverUrl } = validation.data;
 
     const artist = await prisma.artist.findFirst();
     if (!artist) {
@@ -42,17 +46,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const year =
-      typeof releaseYear === "number"
-        ? releaseYear
-        : releaseYear
-        ? Number(releaseYear)
-        : null;
-
     const album = await prisma.album.create({
       data: {
         title,
-        releaseYear: Number.isNaN(year) ? null : year,
+        releaseYear: releaseYear || null,
         coverUrl: coverUrl || null,
         artistId: artist.id,
       },

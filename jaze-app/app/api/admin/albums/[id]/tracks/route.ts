@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/admin-session";
 import { rejectIfInvalidCsrf } from "@/lib/csrf";
+import { createTrackSchema, validateSchema } from "@/lib/validation-schemas";
 
 type RouteContext = {
   params: Promise<{
@@ -27,20 +28,17 @@ export async function POST(req: Request, context: RouteContext) {
 
   try {
     const body = await req.json();
-    const {
-      title,
-      trackNumber,
-      durationSeconds,
-      audioUrl,
-      isExplicit = false,
-    } = body;
 
-    if (!title || !audioUrl) {
+    // Validate input with Zod
+    const validation = validateSchema(createTrackSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Titre et audioUrl sont obligatoires" },
+        { error: "Données invalides", details: validation.errors },
         { status: 400 }
       );
     }
+
+    const { title, trackNumber, durationSeconds, audioUrl, isExplicit } = validation.data;
 
     // Vérifier que l'album existe bien
     const album = await prisma.album.findUnique({
@@ -55,10 +53,10 @@ export async function POST(req: Request, context: RouteContext) {
       data: {
         albumId,
         title,
-        trackNumber: trackNumber ? Number(trackNumber) : 1,
-        durationSeconds: durationSeconds ? Number(durationSeconds) : null,
+        trackNumber: trackNumber || 1,
+        durationSeconds: durationSeconds || null,
         audioUrl,
-        isExplicit,
+        isExplicit: isExplicit || false,
       },
     });
 

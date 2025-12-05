@@ -86,6 +86,7 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([action])
+  @@index([actorEmail])
 }
 
 model User {
@@ -134,6 +135,9 @@ model Session {
   role         Role
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
 }
 
 model VerificationToken {

@@ -4,21 +4,23 @@ import { prisma } from "@/lib/prisma";
 import { deleteMediaAtUrl } from "@/lib/media-storage";
 import { requireAdminSession } from "@/lib/admin-session";
 import { rejectIfInvalidCsrf } from "@/lib/csrf";
+import { updateTrackSchema, validateSchema } from "@/lib/validation-schemas";
 
 type Params = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: Params) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
   const csrfRejected = rejectIfInvalidCsrf(req);
   if (csrfRejected) return csrfRejected;
 
-  const id = Number(params.id);
+  const { id: idParam } = await context.params;
+  const id = Number(idParam);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "ID piste invalide" }, { status: 400 });
   }
@@ -30,16 +32,24 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     const body = await req.json();
-    const { title, trackNumber, durationSeconds, audioUrl, isExplicit } = body;
+
+    // Validate input with Zod
+    const validation = validateSchema(updateTrackSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Données invalides", details: validation.errors },
+        { status: 400 }
+      );
+    }
+
+    const { title, trackNumber, durationSeconds, audioUrl, isExplicit } = validation.data;
 
     const updated = await prisma.track.update({
       where: { id },
       data: {
         title,
-        trackNumber:
-          trackNumber !== undefined ? Number(trackNumber) : undefined,
-        durationSeconds:
-          durationSeconds !== undefined ? Number(durationSeconds) : undefined,
+        trackNumber,
+        durationSeconds,
         audioUrl,
         isExplicit,
       },
@@ -60,14 +70,15 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(req: Request, context: Params) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
   const csrfRejected = rejectIfInvalidCsrf(req);
   if (csrfRejected) return csrfRejected;
 
-  const id = Number(params.id);
+  const { id: idParam } = await context.params;
+  const id = Number(idParam);
   if (Number.isNaN(id)) {
     return NextResponse.json({ error: "ID piste invalide" }, { status: 400 });
   }
