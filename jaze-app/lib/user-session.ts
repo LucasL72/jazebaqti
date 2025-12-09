@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { Role, Session, User } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getSessionMaxAgeSeconds } from "./admin-security";
+import { cleanupExpiredSessions } from "./session-cleanup";
 
 const USER_SESSION_COOKIE = "user_session_token";
 
@@ -74,6 +75,9 @@ async function findSession(raw: string | undefined): Promise<UserSession> {
 }
 
 export async function getCurrentUserSession(): Promise<UserSession> {
+  // Opportunistic cleanup of expired sessions
+  cleanupExpiredSessions().catch(() => {});
+
   const jar = cookies();
   const raw = jar.get(USER_SESSION_COOKIE)?.value;
   const session = await findSession(raw);
