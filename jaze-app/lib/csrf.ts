@@ -18,10 +18,14 @@ function parseCookies(cookieHeader: string | null) {
     }, new Map<string, string>());
 }
 
-export function issueCsrfToken() {
+/**
+ * Issue a new CSRF token or return existing one
+ * @param forceNew - Force generation of a new token (for rotation after POST)
+ */
+export function issueCsrfToken(forceNew = false) {
   const jar = cookies();
   const existing = jar.get(CSRF_COOKIE_NAME)?.value;
-  const token = existing || crypto.randomBytes(32).toString("hex");
+  const token = forceNew || !existing ? crypto.randomBytes(32).toString("hex") : existing;
 
   jar.set({
     name: CSRF_COOKIE_NAME,
@@ -30,9 +34,18 @@ export function issueCsrfToken() {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    maxAge: 60 * 60 * 2, // 2 hours expiry
   });
 
   return token;
+}
+
+/**
+ * Rotate CSRF token after a successful mutation (POST, PUT, DELETE)
+ * Call this after validating and processing a state-changing request
+ */
+export function rotateCsrfToken() {
+  return issueCsrfToken(true);
 }
 
 export function validateCsrfRequest(req: Request) {

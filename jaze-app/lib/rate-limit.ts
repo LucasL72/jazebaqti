@@ -14,19 +14,71 @@ type RateLimitState = {
   resetAt: number;
 };
 
+// In-memory store with automatic cleanup
 const rateLimitBuckets = new Map<string, RateLimitState>();
+const CLEANUP_INTERVAL_MS = 60000; // Clean up every minute
+let lastCleanup = Date.now();
 
-function getClientIdentifier(req: Request | NextRequest) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const [first] = forwardedFor.split(",");
-    if (first) return first.trim();
+function cleanupExpiredBuckets() {
+  const now = Date.now();
+  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
+
+  lastCleanup = now;
+  for (const [key, state] of rateLimitBuckets) {
+    if (state.resetAt <= now) {
+      rateLimitBuckets.delete(key);
+    }
+  }
+}
+
+// Validate IP address format to prevent header spoofing
+function isValidIp(ip: string): boolean {
+  // IPv4 pattern
+  const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+  // IPv6 pattern (simplified)
+  const ipv6Pattern = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+
+  if (ipv4Pattern.test(ip)) {
+    // Validate each octet is 0-255
+    return ip.split(".").every((octet) => {
+      const num = parseInt(octet, 10);
+      return num >= 0 && num <= 255;
+    });
   }
 
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp;
+  return ipv6Pattern.test(ip);
+}
 
-  return "anonymous";
+function getClientIdentifier(req: Request | NextRequest) {
+  // Only trust proxy headers if TRUST_PROXY is enabled
+  const trustProxy = process.env.TRUST_PROXY === "true";
+
+  if (trustProxy) {
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    if (forwardedFor) {
+      const [first] = forwardedFor.split(",");
+      const ip = first?.trim();
+      if (ip && isValidIp(ip)) return ip;
+    }
+
+    const realIp = req.headers.get("x-real-ip");
+    if (realIp && isValidIp(realIp)) return realIp;
+  }
+
+  // Fallback: use a hash of user-agent + accept-language for some differentiation
+  const ua = req.headers.get("user-agent") || "";
+  const lang = req.headers.get("accept-language") || "";
+  return `anon:${hashString(ua + lang)}`;
+}
+
+function hashString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
 }
 
 function buildHeaders(
@@ -49,6 +101,9 @@ export async function enforceRateLimit(
   req: Request | NextRequest,
   options: RateLimitOptions
 ): Promise<NextResponse | null> {
+  // Periodic cleanup of expired buckets
+  cleanupExpiredBuckets();
+
   const identifier = getClientIdentifier(req);
   const bucketKey = `${options.key}:${identifier}`;
   const now = Date.now();

@@ -5,6 +5,7 @@ import { prisma } from "./prisma";
 import { getSessionMaxAgeSeconds } from "./admin-security";
 import { Role, Session, User } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { cleanupExpiredSessions } from "./session-cleanup";
 
 export const ADMIN_SESSION_COOKIE = "admin_session_token";
 
@@ -96,6 +97,9 @@ async function findSessionByToken(rawToken: string | undefined) {
 }
 
 export async function getCurrentAdminSession(): Promise<AdminSession> {
+  // Opportunistic cleanup of expired sessions
+  cleanupExpiredSessions().catch(() => {});
+
   const cookieStore = cookies();
   const rawCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   const session = await findSessionByToken(rawCookie);
