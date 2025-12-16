@@ -2,9 +2,28 @@ import { PrismaClient, Role } from "@prisma/client";
 import { hashPassword, validatePasswordComplexity } from "../lib/admin-security";
 import { databaseUrlWithTls, env } from "../lib/env";
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: databaseUrlWithTls } },
-});
+// Vérification que le client Prisma est bien généré
+let prisma: PrismaClient;
+try {
+  prisma = new PrismaClient({
+    datasources: { db: { url: databaseUrlWithTls } },
+  });
+
+  // Test pour vérifier que le client est fonctionnel
+  if (typeof prisma.user?.upsert !== "function") {
+    throw new Error("Client Prisma non généré");
+  }
+} catch (error) {
+  console.error("\n❌ Erreur d'initialisation du client Prisma.");
+  console.error("   Le client n'a pas été généré ou est corrompu.\n");
+  console.error("   Solution:");
+  console.error("   1. npx prisma generate");
+  console.error("   2. npm run seed\n");
+  if (error instanceof Error && error.message !== "Client Prisma non généré") {
+    console.error("   Détail:", error.message);
+  }
+  process.exit(1);
+}
 
 async function main() {
   console.log("🌱 Seeding database...");
@@ -53,24 +72,46 @@ async function main() {
     );
   }
 
-  // 1. L'artiste
-  const jaze = await prisma.artist.create({
-    data: {
-      name: "Jaze Baqti",
-      bio: "Artiste indépendant",
-      imageUrl: "/images/jaze.jpg",
-
-      instagramUrl: "https://www.instagram.com/jaze.baqti/",
-      soundcloudUrl: "https://soundcloud.com/jaze-baqti",
-      bandcampUrl: "https://jazebaqti.bandcamp.com",
-      deviantartUrl: "https://deviantart.com/jazebaqti",
-      websiteUrl: "https://jazebaqti.com",
-
-      emailContact: "contact@jazebaqti.com",
-    },
+  // 1. L'artiste (upsert pour éviter les doublons)
+  const existingArtist = await prisma.artist.findFirst({
+    where: { name: "Jaze Baqti" },
   });
 
-  // 2. Exemple d’album
+  const jaze = existingArtist
+    ? existingArtist
+    : await prisma.artist.create({
+        data: {
+          name: "Jaze Baqti",
+          bio: "Artiste indépendant",
+          imageUrl: "/images/jaze.jpg",
+          instagramUrl: "https://www.instagram.com/jaze.baqti/",
+          soundcloudUrl: "https://soundcloud.com/jaze-baqti",
+          bandcampUrl: "https://jazebaqti.bandcamp.com",
+          deviantartUrl: "https://deviantart.com/jazebaqti",
+          websiteUrl: "https://jazebaqti.com",
+          emailContact: "contact@jazebaqti.com",
+        },
+      });
+
+  if (existingArtist) {
+    console.log("✅ Artiste existant trouvé");
+  } else {
+    console.log("✅ Artiste créé");
+  }
+
+  // 2. Exemple d'album (vérifie si existe déjà)
+  const existingAlbum = await prisma.album.findFirst({
+    where: { title: "Introducing Jaze Baqti", artistId: jaze.id },
+    include: { tracks: true },
+  });
+
+  if (existingAlbum) {
+    console.log("✅ Album existant trouvé (seed ignoré pour éviter doublons)");
+    console.log("✔ Seed terminé !");
+    console.log({ jaze, album: existingAlbum });
+    return;
+  }
+
   const album = await prisma.album.create({
     data: {
       artistId: jaze.id,
