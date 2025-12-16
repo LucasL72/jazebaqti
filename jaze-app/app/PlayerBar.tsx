@@ -185,7 +185,7 @@ export function PlayerBar() {
               max={1}
               step={0.01}
               value={volume}
-              onChange={(_, v) => setVolume(Number(v))}
+              onChange={(_: Event, v: number | number[]) => setVolume(Number(v))}
               sx={{ width: { xs: "60%", sm: 120 } }}
             />
           </Stack>
@@ -201,7 +201,7 @@ export function PlayerBar() {
             min={0}
             max={100}
             value={progressPercent}
-            onChange={(_, v) => seek((Number(v) / 100) * duration)}
+            onChange={(_: Event, v: number | number[]) => seek((Number(v) / 100) * duration)}
             sx={{ flex: 1 }}
           />
 

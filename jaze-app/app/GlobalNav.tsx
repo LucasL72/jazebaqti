@@ -69,7 +69,7 @@ export function GlobalNav() {
     router.push("/");
   };
 
-  const toggleDrawer = () => setOpen((prev) => !prev);
+  const toggleDrawer = () => setOpen((prev: boolean) => !prev);
   const closeDrawer = () => setOpen(false);
 
   return (
