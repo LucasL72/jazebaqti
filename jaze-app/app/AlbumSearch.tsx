@@ -58,7 +58,7 @@ export function AlbumSearch({ albums }: { albums: AlbumForGrid[] }) {
           fullWidth
           placeholder="Rechercher par titre ou année..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">

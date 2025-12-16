@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 
@@ -84,7 +85,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setIsPlaying(true);
         setIsLoading(false);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("Erreur de lecture:", err);
         setError("Impossible de lire ce titre");
         setIsPlaying(false);
@@ -136,7 +137,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           setIsPlaying(true);
           setIsLoading(false);
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("Erreur de lecture:", err);
           setError("Impossible de reprendre la lecture");
           setIsPlaying(false);
@@ -145,7 +146,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const playNext = () => {
+  const playNext = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || queue.length === 0) return;
 
@@ -155,7 +156,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio
         .play()
         .then(() => setIsPlaying(true))
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("Erreur de lecture:", err);
           setError("Impossible de répéter ce titre");
         });
@@ -172,7 +173,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Mode repeat = "none" : arrête la lecture
       setIsPlaying(false);
     }
-  };
+  }, [queue, currentIndex, repeat]);
 
   const playPrev = () => {
     const audio = audioRef.current;
@@ -190,7 +191,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           setIsPlaying(true);
           setIsLoading(false);
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("Erreur de lecture:", err);
           setError("Impossible de relire ce titre");
           setIsPlaying(false);
@@ -245,7 +246,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setQueue(originalQueue);
       // Retrouve l'index de la piste actuelle dans la queue originale
       if (currentTrack) {
-        const newIndex = originalQueue.findIndex((t) => t.id === currentTrack.id);
+        const newIndex = originalQueue.findIndex((t: TrackInfo) => t.id === currentTrack.id);
         setCurrentIndex(newIndex >= 0 ? newIndex : 0);
       }
       setShuffle(false);
@@ -254,7 +255,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const toggleRepeat = () => {
     // Cycle : none -> all -> one -> none
-    setRepeat((prev) => {
+    setRepeat((prev: RepeatMode) => {
       if (prev === "none") return "all";
       if (prev === "all") return "one";
       return "none";

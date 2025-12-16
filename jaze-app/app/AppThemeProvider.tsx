@@ -77,7 +77,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     () => ({
       mode,
       toggleColorMode: () => {
-        setMode((prev) => {
+        setMode((prev: PaletteMode) => {
           const next = prev === "light" ? "dark" : "light";
           if (typeof window !== "undefined") {
             window.localStorage.setItem("color-mode", next);
