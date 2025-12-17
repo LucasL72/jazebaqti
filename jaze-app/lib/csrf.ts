@@ -22,8 +22,8 @@ function parseCookies(cookieHeader: string | null) {
  * Issue a new CSRF token or return existing one
  * @param forceNew - Force generation of a new token (for rotation after POST)
  */
-export function issueCsrfToken(forceNew = false) {
-  const jar = cookies();
+export async function issueCsrfToken(forceNew = false) {
+  const jar = await cookies();
   const existing = jar.get(CSRF_COOKIE_NAME)?.value;
   const token = forceNew || !existing ? crypto.randomBytes(32).toString("hex") : existing;
 
@@ -44,7 +44,7 @@ export function issueCsrfToken(forceNew = false) {
  * Rotate CSRF token after a successful mutation (POST, PUT, DELETE)
  * Call this after validating and processing a state-changing request
  */
-export function rotateCsrfToken() {
+export async function rotateCsrfToken() {
   return issueCsrfToken(true);
 }
 
