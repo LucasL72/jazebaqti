@@ -82,15 +82,9 @@ export async function getCurrentUserSession(): Promise<UserSession> {
   const raw = jar.get(USER_SESSION_COOKIE)?.value;
   const session = await findSession(raw);
 
-  if (!session) {
-    jar.set(USER_SESSION_COOKIE, "", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
-    });
-  }
+  // Note: Ne pas modifier les cookies ici car cette fonction peut être appelée
+  // depuis un Server Component. La suppression du cookie sera gérée côté client
+  // ou dans les Route Handlers.
 
   return session;
 }

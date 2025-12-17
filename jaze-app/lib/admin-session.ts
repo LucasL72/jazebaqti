@@ -104,15 +104,9 @@ export async function getCurrentAdminSession(): Promise<AdminSession> {
   const rawCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   const session = await findSessionByToken(rawCookie);
 
-  if (!session) {
-    cookieStore.set(ADMIN_SESSION_COOKIE, "", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
-    });
-  }
+  // Note: Ne pas modifier les cookies ici car cette fonction peut être appelée
+  // depuis un Server Component. La suppression du cookie sera gérée côté client
+  // ou dans les Route Handlers.
 
   return session;
 }
