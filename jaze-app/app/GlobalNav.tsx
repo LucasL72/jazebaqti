@@ -45,7 +45,8 @@ export function GlobalNav() {
     }
   }, [csrfError]);
 
-  const isAdmin = pathname?.startsWith("/admin");
+  const isAdminPage = pathname?.startsWith("/admin");
+  const isUserAdmin = user?.role === "admin";
 
   const handleLogout = async () => {
     if (!csrfToken) return;
@@ -118,7 +119,19 @@ export function GlobalNav() {
                 </Typography>
               </Link>
             ))}
-            {isAdmin && (
+            {/* Lien vers dashboard admin pour les admins sur pages publiques */}
+            {!isAdminPage && isUserAdmin && (
+              <Link href="/admin/albums" style={{ textDecoration: "none" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ "&:hover": { textDecoration: "underline" }, mt: 1, fontWeight: 600 }}
+                >
+                  Dashboard Admin
+                </Typography>
+              </Link>
+            )}
+            {/* Liens admin quand on est sur une page admin */}
+            {isAdminPage && (
               <Link href="/admin/albums" style={{ textDecoration: "none" }}>
                 <Typography
                   variant="body2"
@@ -128,7 +141,7 @@ export function GlobalNav() {
                 </Typography>
               </Link>
             )}
-            {isAdmin && (
+            {isAdminPage && (
               <Link href="/admin/audit" style={{ textDecoration: "none" }}>
                 <Typography
                   variant="body2"
@@ -138,17 +151,18 @@ export function GlobalNav() {
                 </Typography>
               </Link>
             )}
-            {isAdmin && (
+            {isAdminPage && (
               <Link href="/admin/profile" style={{ textDecoration: "none" }}>
                 <Typography
                   variant="body2"
                   sx={{ "&:hover": { textDecoration: "underline" } }}
                 >
-                  Mon profil
+                  Mon profil (admin)
                 </Typography>
               </Link>
             )}
-            {!isAdmin && user && (
+            {/* Profil utilisateur */}
+            {!isAdminPage && user && (
               <Link href="/profile" style={{ textDecoration: "none" }}>
                 <Typography
                   variant="body2"
@@ -195,17 +209,17 @@ export function GlobalNav() {
               Mode {theme.palette.mode === "dark" ? "clair" : "sombre"}
             </Button>
 
-            {isAdmin && (
+            {isAdminPage && (
               <Button variant="text" color="error" onClick={handleLogout}>
                 Déconnexion
               </Button>
             )}
-            {!isAdmin && user && (
+            {!isAdminPage && user && (
               <Button variant="text" color="error" onClick={handleUserLogout}>
                 Se déconnecter
               </Button>
             )}
-            {!isAdmin && !user && (
+            {!isAdminPage && !user && (
               <Button variant="contained" onClick={() => router.push("/login")}
                 disabled={userLoading}
               >
@@ -295,7 +309,20 @@ export function GlobalNav() {
                 </ListItemButton>
               </Link>
             ))}
-            {isAdmin && (
+            {/* Lien vers dashboard admin pour les admins sur pages publiques */}
+            {!isAdminPage && isUserAdmin && (
+              <Link
+                href="/admin/albums"
+                onClick={closeDrawer}
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <ListItemButton>
+                  <ListItemText primary="Dashboard Admin" primaryTypographyProps={{ fontWeight: 600 }} />
+                </ListItemButton>
+              </Link>
+            )}
+            {/* Liens admin quand on est sur une page admin */}
+            {isAdminPage && (
               <Link
                 href="/admin/albums"
                 onClick={closeDrawer}
@@ -306,7 +333,7 @@ export function GlobalNav() {
                 </ListItemButton>
               </Link>
             )}
-            {isAdmin && (
+            {isAdminPage && (
               <Link
                 href="/admin/audit"
                 onClick={closeDrawer}
@@ -317,18 +344,19 @@ export function GlobalNav() {
                 </ListItemButton>
               </Link>
             )}
-            {isAdmin && (
+            {isAdminPage && (
               <Link
                 href="/admin/profile"
                 onClick={closeDrawer}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <ListItemButton>
-                  <ListItemText primary="Mon profil" />
+                  <ListItemText primary="Mon profil (admin)" />
                 </ListItemButton>
               </Link>
             )}
-            {!isAdmin && user && (
+            {/* Profil utilisateur */}
+            {!isAdminPage && user && (
               <Link
                 href="/profile"
                 onClick={closeDrawer}
@@ -374,17 +402,17 @@ export function GlobalNav() {
               Mode {theme.palette.mode === "dark" ? "clair" : "sombre"}
             </Button>
 
-            {isAdmin && (
+            {isAdminPage && (
               <Button variant="text" color="error" onClick={handleLogout}>
                 Déconnexion
               </Button>
             )}
-            {!isAdmin && user && (
+            {!isAdminPage && user && (
               <Button variant="text" color="error" onClick={handleUserLogout}>
                 Se déconnecter
               </Button>
             )}
-            {!isAdmin && !user && (
+            {!isAdminPage && !user && (
               <Button variant="contained" onClick={() => router.push("/login")}
                 disabled={userLoading}
               >
