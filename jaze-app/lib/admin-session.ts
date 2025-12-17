@@ -57,7 +57,7 @@ export async function createAdminSession(userId: string, role: Role) {
     }),
   ]);
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, serializeSessionCookie(token, role), {
     httpOnly: true,
     secure: true,
@@ -100,7 +100,7 @@ export async function getCurrentAdminSession(): Promise<AdminSession> {
   // Opportunistic cleanup of expired sessions
   cleanupExpiredSessions().catch(() => {});
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const rawCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   const session = await findSessionByToken(rawCookie);
 
@@ -130,7 +130,7 @@ export async function requireAdminSession(): Promise<AdminSession | NextResponse
 }
 
 export async function revokeCurrentSession() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const payload = parseSessionCookie(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
   if (payload?.token) {
     const hashed = hashToken(payload.token);

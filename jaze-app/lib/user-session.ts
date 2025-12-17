@@ -41,7 +41,7 @@ export async function createUserSession(userId: string, role: Role) {
     },
   });
 
-  const jar = cookies();
+  const jar = await cookies();
   jar.set(USER_SESSION_COOKIE, serializeSessionCookie(token, role), {
     httpOnly: true,
     secure: true,
@@ -78,7 +78,7 @@ export async function getCurrentUserSession(): Promise<UserSession> {
   // Opportunistic cleanup of expired sessions
   cleanupExpiredSessions().catch(() => {});
 
-  const jar = cookies();
+  const jar = await cookies();
   const raw = jar.get(USER_SESSION_COOKIE)?.value;
   const session = await findSession(raw);
 
@@ -105,7 +105,7 @@ export async function requireUserSession(): Promise<UserSession | NextResponse> 
 }
 
 export async function revokeUserSession() {
-  const jar = cookies();
+  const jar = await cookies();
   const raw = jar.get(USER_SESSION_COOKIE)?.value;
   const parsed = parseSessionCookie(raw);
 
