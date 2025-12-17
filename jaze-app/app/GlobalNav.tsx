@@ -138,6 +138,26 @@ export function GlobalNav() {
                 </Typography>
               </Link>
             )}
+            {isAdmin && (
+              <Link href="/admin/profile" style={{ textDecoration: "none" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ "&:hover": { textDecoration: "underline" } }}
+                >
+                  Mon profil
+                </Typography>
+              </Link>
+            )}
+            {!isAdmin && user && (
+              <Link href="/profile" style={{ textDecoration: "none" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ "&:hover": { textDecoration: "underline" } }}
+                >
+                  Mon profil
+                </Typography>
+              </Link>
+            )}
           </Stack>
         </Box>
 
@@ -294,6 +314,28 @@ export function GlobalNav() {
               >
                 <ListItemButton>
                   <ListItemText primary="Audit & alertes" />
+                </ListItemButton>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin/profile"
+                onClick={closeDrawer}
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <ListItemButton>
+                  <ListItemText primary="Mon profil" />
+                </ListItemButton>
+              </Link>
+            )}
+            {!isAdmin && user && (
+              <Link
+                href="/profile"
+                onClick={closeDrawer}
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <ListItemButton>
+                  <ListItemText primary="Mon profil" />
                 </ListItemButton>
               </Link>
             )}
