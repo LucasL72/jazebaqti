@@ -3,8 +3,19 @@ import type { NextConfig } from "next";
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
-    value:
-      "default-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'",
+    value: [
+      "default-src 'self'",
+      "img-src 'self' data: blob:",
+      "media-src 'self' data: blob:",
+      "font-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      // Next.js nécessite 'unsafe-inline' et 'unsafe-eval' pour le fonctionnement de React
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "base-uri 'self'",
+    ].join("; "),
   },
   {
     key: "X-Frame-Options",
