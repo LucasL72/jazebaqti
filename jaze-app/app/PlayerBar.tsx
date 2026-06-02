@@ -4,13 +4,21 @@ import Image from "next/image";
 import { usePlayer } from "./PlayerProvider";
 import {
   Box,
-  Button,
+  CircularProgress,
   IconButton,
   Slider,
   Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
+import ShuffleIcon from "@mui/icons-material/Shuffle";
+import SkipPreviousIcon from "@mui/icons-material/SkipPrevious";
+import SkipNextIcon from "@mui/icons-material/SkipNext";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
+import RepeatIcon from "@mui/icons-material/Repeat";
+import RepeatOneIcon from "@mui/icons-material/RepeatOne";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 
 function formatTime(seconds: number) {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -125,24 +133,47 @@ export function PlayerBar() {
                 onClick={toggleShuffle}
                 disabled={isLoading}
                 size="small"
+                aria-label="Lecture aléatoire"
+                aria-pressed={shuffle}
                 sx={{
                   color: shuffle ? "primary.main" : "text.secondary",
-                  opacity: shuffle ? 1 : 0.5,
+                  opacity: shuffle ? 1 : 0.6,
                 }}
               >
-                🔀
+                <ShuffleIcon fontSize="small" />
               </IconButton>
             </Tooltip>
 
-            <Button onClick={playPrev} disabled={isLoading} size="small">
-              ⏮
-            </Button>
-            <Button onClick={togglePlayPause} disabled={isLoading}>
-              {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
-            </Button>
-            <Button onClick={playNext} disabled={isLoading} size="small">
-              ⏭
-            </Button>
+            <IconButton
+              onClick={playPrev}
+              disabled={isLoading}
+              size="small"
+              aria-label="Titre précédent"
+            >
+              <SkipPreviousIcon />
+            </IconButton>
+            <IconButton
+              onClick={togglePlayPause}
+              disabled={isLoading}
+              color="primary"
+              aria-label={isPlaying ? "Pause" : "Lecture"}
+            >
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : isPlaying ? (
+                <PauseIcon />
+              ) : (
+                <PlayArrowIcon />
+              )}
+            </IconButton>
+            <IconButton
+              onClick={playNext}
+              disabled={isLoading}
+              size="small"
+              aria-label="Titre suivant"
+            >
+              <SkipNextIcon />
+            </IconButton>
 
             {/* Repeat */}
             <Tooltip
@@ -159,12 +190,18 @@ export function PlayerBar() {
                 onClick={toggleRepeat}
                 disabled={isLoading}
                 size="small"
+                aria-label="Répétition"
+                aria-pressed={repeat !== "none"}
                 sx={{
                   color: repeat !== "none" ? "primary.main" : "text.secondary",
-                  opacity: repeat !== "none" ? 1 : 0.5,
+                  opacity: repeat !== "none" ? 1 : 0.6,
                 }}
               >
-                {repeat === "one" ? "🔂" : "🔁"}
+                {repeat === "one" ? (
+                  <RepeatOneIcon fontSize="small" />
+                ) : (
+                  <RepeatIcon fontSize="small" />
+                )}
               </IconButton>
             </Tooltip>
           </Stack>
@@ -179,13 +216,14 @@ export function PlayerBar() {
               justifyContent: "flex-end",
             }}
           >
-            <Typography variant="caption">Volume</Typography>
+            <VolumeUpIcon fontSize="small" sx={{ color: "text.secondary" }} />
             <Slider
               min={0}
               max={1}
               step={0.01}
               value={volume}
               onChange={(_: Event, v: number | number[]) => setVolume(Number(v))}
+              aria-label="Volume"
               sx={{ width: { xs: "60%", sm: 120 } }}
             />
           </Stack>

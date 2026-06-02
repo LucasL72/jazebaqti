@@ -275,6 +275,18 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
+    # --- Médias privés signés (uploads admin) servis par Nginx ---
+    # Next.js valide la signature HMAC sur /api/media puis renvoie un header
+    # X-Accel-Redirect : Nginx prend alors le relais et sert le fichier depuis
+    # le disque (sendfile + gestion native des requêtes Range/seek).
+    # Le `internal` empêche tout accès direct sans passer par la signature.
+    location /_protected_media/ {
+        internal;
+        alias /home/jaze/jazebaqti/jaze-app/private_media/;
+        add_header Accept-Ranges bytes;
+        add_header Cache-Control "private, max-age=0, must-revalidate";
+    }
+
     # Proxy vers Next.js
     location / {
         proxy_pass http://localhost:3000;
@@ -289,6 +301,13 @@ server {
     }
 }
 ```
+
+> **Délégation des médias à Nginx (recommandé en production).**
+> Renseignez `MEDIA_INTERNAL_REDIRECT="/_protected_media"` dans `.env.local`.
+> Sans cette variable, Next.js sert lui-même les fichiers (avec support Range
+> intégré) — pratique en local, mais charge davantage le process Node.
+> Le préfixe doit correspondre à la `location internal` ci-dessus, et l'`alias`
+> doit pointer vers le dossier `private_media/` de l'application.
 
 ### 3. Activer la configuration
 

@@ -43,6 +43,7 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   wav: "audio/wav",
   flac: "audio/flac",
   ogg: "audio/ogg",
+  opus: "audio/ogg",
   webm: "audio/webm",
   m4a: "audio/mp4",
   webp: "image/webp",
@@ -341,19 +342,89 @@ export async function handleSignedMediaRequest(req: Request) {
   }
 
   const filePath = resolveLocalPathForKey(key);
-  try {
-    const stats = await stat(filePath);
-    const ext = path.extname(filePath).replace(/^\./, "") || null;
-    const mime = mimeFromExtension(ext);
-    const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
 
-    return new NextResponse(stream, {
+  let stats;
+  try {
+    stats = await stat(filePath);
+  } catch (err) {
+    console.error("Erreur lecture média", err);
+    return NextResponse.json({ error: "Fichier introuvable" }, { status: 404 });
+  }
+
+  const ext = path.extname(filePath).replace(/^\./, "") || null;
+  const mime = mimeFromExtension(ext);
+
+  // Délégation à Nginx via X-Accel-Redirect : Next.js valide la signature puis
+  // laisse le reverse proxy servir le fichier (gestion native du Range, sendfile,
+  // cache). Cf. docs/DEPLOYMENT_VPS.md pour la `location internal` correspondante.
+  if (env.MEDIA_INTERNAL_REDIRECT) {
+    const redirectPath = path.posix.join(env.MEDIA_INTERNAL_REDIRECT, key);
+    return new NextResponse(null, {
       status: 200,
       headers: {
+        "X-Accel-Redirect": redirectPath,
         "Content-Type": mime,
-        "Content-Length": String(stats.size),
+        "Accept-Ranges": "bytes",
         "Cache-Control": "private, max-age=0, must-revalidate",
       },
+    });
+  }
+
+  const baseHeaders: Record<string, string> = {
+    "Content-Type": mime,
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "private, max-age=0, must-revalidate",
+  };
+
+  const total = stats.size;
+  const rangeHeader = req.headers.get("range");
+
+  try {
+    // Requête partielle (seek / streaming) : on répond en 206 avec le bon segment.
+    const match = rangeHeader ? /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim()) : null;
+    if (match) {
+      const hasStart = match[1] !== "";
+      const hasEnd = match[2] !== "";
+      let start: number;
+      let end: number;
+
+      if (!hasStart && hasEnd) {
+        // Forme suffixe "bytes=-N" : les N derniers octets.
+        const suffixLength = Number(match[2]);
+        start = Math.max(0, total - suffixLength);
+        end = total - 1;
+      } else {
+        start = hasStart ? Number(match[1]) : 0;
+        end = hasEnd ? Number(match[2]) : total - 1;
+      }
+
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= total) {
+        return new NextResponse(null, {
+          status: 416,
+          headers: { ...baseHeaders, "Content-Range": `bytes */${total}` },
+        });
+      }
+
+      end = Math.min(end, total - 1);
+      const chunkSize = end - start + 1;
+      const stream = Readable.toWeb(
+        createReadStream(filePath, { start, end })
+      ) as ReadableStream;
+
+      return new NextResponse(stream, {
+        status: 206,
+        headers: {
+          ...baseHeaders,
+          "Content-Range": `bytes ${start}-${end}/${total}`,
+          "Content-Length": String(chunkSize),
+        },
+      });
+    }
+
+    const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
+    return new NextResponse(stream, {
+      status: 200,
+      headers: { ...baseHeaders, "Content-Length": String(total) },
     });
   } catch (err) {
     console.error("Erreur lecture média", err);

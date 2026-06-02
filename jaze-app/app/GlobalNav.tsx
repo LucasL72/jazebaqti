@@ -73,6 +73,52 @@ export function GlobalNav() {
   const toggleDrawer = () => setOpen((prev: boolean) => !prev);
   const closeDrawer = () => setOpen(false);
 
+  // Contrôles de session partagés entre la sidebar desktop et le drawer mobile
+  // (infos utilisateur, bascule de thème, connexion / déconnexion).
+  const sessionControls = (
+    <>
+      {user && (
+        <Box>
+          <Typography variant="body2" fontWeight={600}>
+            {user.name || "Profil"}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {user.email}
+          </Typography>
+        </Box>
+      )}
+      <Button
+        variant="text"
+        onClick={colorMode.toggleColorMode}
+        startIcon={
+          theme.palette.mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />
+        }
+      >
+        Mode {theme.palette.mode === "dark" ? "clair" : "sombre"}
+      </Button>
+
+      {isAdminPage && (
+        <Button variant="text" color="error" onClick={handleLogout}>
+          Déconnexion
+        </Button>
+      )}
+      {!isAdminPage && user && (
+        <Button variant="text" color="error" onClick={handleUserLogout}>
+          Se déconnecter
+        </Button>
+      )}
+      {!isAdminPage && !user && (
+        <Button
+          variant="contained"
+          onClick={() => router.push("/login")}
+          disabled={userLoading}
+        >
+          Connexion / Inscription
+        </Button>
+      )}
+    </>
+  );
+
   return (
     <>
       {/* -------------------- VERSION DESKTOP -------------------- */}
@@ -184,49 +230,7 @@ export function GlobalNav() {
             borderColor: "divider",
           }}
         >
-          <Stack spacing={1}>
-            {user && (
-              <Box>
-                <Typography variant="body2" fontWeight={600}>
-                  {user.name || "Profil"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {user.email}
-                </Typography>
-              </Box>
-            )}
-            <Button
-              variant="text"
-              onClick={colorMode.toggleColorMode}
-              startIcon={
-                theme.palette.mode === "dark" ? (
-                  <LightModeIcon />
-                ) : (
-                  <DarkModeIcon />
-                )
-              }
-            >
-              Mode {theme.palette.mode === "dark" ? "clair" : "sombre"}
-            </Button>
-
-            {isAdminPage && (
-              <Button variant="text" color="error" onClick={handleLogout}>
-                Déconnexion
-              </Button>
-            )}
-            {!isAdminPage && user && (
-              <Button variant="text" color="error" onClick={handleUserLogout}>
-                Se déconnecter
-              </Button>
-            )}
-            {!isAdminPage && !user && (
-              <Button variant="contained" onClick={() => router.push("/login")}
-                disabled={userLoading}
-              >
-                Connexion / Inscription
-              </Button>
-            )}
-          </Stack>
+          <Stack spacing={1}>{sessionControls}</Stack>
         </Box>
       </Box>
 
@@ -378,47 +382,7 @@ export function GlobalNav() {
               pt: 2,
             }}
           >
-            {user && (
-              <Box>
-                <Typography variant="body2" fontWeight={600}>
-                  {user.name || "Profil"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {user.email}
-                </Typography>
-              </Box>
-            )}
-            <Button
-              variant="text"
-              onClick={colorMode.toggleColorMode}
-              startIcon={
-                theme.palette.mode === "dark" ? (
-                  <LightModeIcon />
-                ) : (
-                  <DarkModeIcon />
-                )
-              }
-            >
-              Mode {theme.palette.mode === "dark" ? "clair" : "sombre"}
-            </Button>
-
-            {isAdminPage && (
-              <Button variant="text" color="error" onClick={handleLogout}>
-                Déconnexion
-              </Button>
-            )}
-            {!isAdminPage && user && (
-              <Button variant="text" color="error" onClick={handleUserLogout}>
-                Se déconnecter
-              </Button>
-            )}
-            {!isAdminPage && !user && (
-              <Button variant="contained" onClick={() => router.push("/login")}
-                disabled={userLoading}
-              >
-                Connexion / Inscription
-              </Button>
-            )}
+            {sessionControls}
           </Stack>
         </Box>
       </Drawer>
