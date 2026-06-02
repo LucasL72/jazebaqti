@@ -102,7 +102,9 @@ a {
 @media (max-width: 900px) {
   .main-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr 90px;
+    /* Le player s'empile en colonne sur mobile : on laisse la rangée grandir
+       (auto) au lieu de la figer à 90px, sinon les contrôles sont tronqués. */
+    grid-template-rows: auto 1fr auto;
   }
 
   .main-shell__sidebar {

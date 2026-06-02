@@ -85,6 +85,10 @@ export const env = {
   ADMIN_PASSWORD: requireSecret("ADMIN_PASSWORD", 12),
   ADMIN_TOTP_SECRET: process.env.ADMIN_TOTP_SECRET,
   MEDIA_SIGNING_SECRET: requireSecret("MEDIA_SIGNING_SECRET", 32),
+  // Préfixe de location interne Nginx pour déléguer l'envoi des médias via
+  // X-Accel-Redirect (ex: "/_protected_media"). Vide = Next.js sert lui-même
+  // les fichiers (utile en dev / sans reverse proxy).
+  MEDIA_INTERNAL_REDIRECT: (process.env.MEDIA_INTERNAL_REDIRECT || "").trim(),
   ADMIN_SESSION_MAX_AGE_SECONDS: parsePositiveNumber(
     process.env.ADMIN_SESSION_MAX_AGE_SECONDS,
     60 * 30
