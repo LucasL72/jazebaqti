@@ -1,4 +1,4 @@
-import { AuditLog, AuditSeverity, Role, User } from "@prisma/client";
+import { AuditLog, AuditSeverity, Prisma, Role, User } from "@prisma/client";
 import { prisma } from "./prisma";
 import { env } from "./env";
 
@@ -8,7 +8,9 @@ export type AuditAction =
   | "media.upload"
   | "role.change"
   | "auth.login.success"
-  | "auth.login.failure";
+  | "auth.login.failure"
+  | "admin_password_change_failed"
+  | "admin_profile_updated";
 
 type Actor = Pick<User, "id" | "email" | "name" | "role"> | null | undefined;
 
@@ -110,7 +112,10 @@ export async function logAuditEvent(action: AuditAction, context: AuditContext =
     data: {
       action,
       message: context.message ?? null,
-      metadata: context.metadata ?? undefined,
+      metadata:
+        context.metadata == null
+          ? undefined
+          : (context.metadata as Prisma.InputJsonValue),
       severity: context.severity ?? AuditSeverity.info,
       actorUserId: actorId,
       actorEmail,

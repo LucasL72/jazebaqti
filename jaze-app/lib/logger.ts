@@ -121,6 +121,35 @@ function formatLog(
   return parts.join("\n");
 }
 
+// Report best-effort des erreurs vers un collecteur externe (Sentry, Datadog,
+// webhook…) si ERROR_REPORTING_WEBHOOK_URL est configuré. Volontairement
+// découplé de lib/env pour rester utilisable partout (y compris en edge).
+function reportError(
+  message: string,
+  error?: unknown,
+  context?: LogContext
+): void {
+  const endpoint = process.env.ERROR_REPORTING_WEBHOOK_URL;
+  if (!endpoint || typeof fetch !== "function") return;
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    level: "error" as const,
+    message,
+    error: error ? formatError(error) : undefined,
+    context: context ? redactObject(context) : undefined,
+    service: "jaze-app",
+    environment: process.env.NODE_ENV,
+  };
+
+  void fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export const logger = {
   debug(message: string, context?: LogContext) {
     if (process.env.NODE_ENV === "development") {
@@ -138,6 +167,7 @@ export const logger = {
 
   error(message: string, error?: unknown, context?: LogContext) {
     console.error(formatLog("error", message, context, error));
+    reportError(message, error, context);
   },
 };
 

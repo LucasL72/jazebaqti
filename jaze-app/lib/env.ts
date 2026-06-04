@@ -89,6 +89,11 @@ export const env = {
   // X-Accel-Redirect (ex: "/_protected_media"). Vide = Next.js sert lui-même
   // les fichiers (utile en dev / sans reverse proxy).
   MEDIA_INTERNAL_REDIRECT: (process.env.MEDIA_INTERNAL_REDIRECT || "").trim(),
+  // Transcodage audio automatique à l'upload (génère un .opus via ffmpeg).
+  // Nécessite ffmpeg installé sur le serveur. Best-effort, désactivé par défaut.
+  AUDIO_TRANSCODE_ENABLED: parseBoolean(process.env.AUDIO_TRANSCODE_ENABLED, false),
+  // Endpoint optionnel de report d'erreurs (Sentry envelope / webhook).
+  ERROR_REPORTING_WEBHOOK_URL: optionalUrl("ERROR_REPORTING_WEBHOOK_URL"),
   ADMIN_SESSION_MAX_AGE_SECONDS: parsePositiveNumber(
     process.env.ADMIN_SESSION_MAX_AGE_SECONDS,
     60 * 30

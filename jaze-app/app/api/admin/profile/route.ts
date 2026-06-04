@@ -49,7 +49,7 @@ export async function PUT(req: Request) {
 
   const updates: {
     email?: string;
-    name?: string;
+    name?: string | null;
     passwordHash?: string;
     passwordUpdatedAt?: Date;
   } = {};
@@ -100,12 +100,11 @@ export async function PUT(req: Request) {
 
     const isValid = await verifyPassword(body.currentPassword, user.passwordHash);
     if (!isValid) {
-      await logAuditEvent({
-        action: "admin_password_change_failed",
-        message: "Tentative de changement de mot de passe avec ancien mot de passe incorrect",
+      await logAuditEvent("admin_password_change_failed", {
+        message:
+          "Tentative de changement de mot de passe avec ancien mot de passe incorrect",
         severity: "warning",
-        actorEmail: user.email || undefined,
-        actorUserId: user.id,
+        actor: user,
       });
 
       return NextResponse.json(
@@ -140,12 +139,10 @@ export async function PUT(req: Request) {
   const changedFields = Object.keys(updates).filter((k) => k !== "passwordHash");
   if (updates.passwordHash) changedFields.push("password");
 
-  await logAuditEvent({
-    action: "admin_profile_updated",
+  await logAuditEvent("admin_profile_updated", {
     message: `Profil modifié: ${changedFields.join(", ")}`,
     severity: "info",
-    actorEmail: updated.email || user.email || undefined,
-    actorUserId: user.id,
+    actor: updated,
   });
 
   return NextResponse.json({

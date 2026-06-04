@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master", "develop"]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: jaze-app
+
+jobs:
+  quality:
+    name: Lint, typecheck & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: jaze-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "mysql://user:pass@localhost:3306/jaze_ci"
+          ADMIN_EMAIL: "admin@example.com"
+          ADMIN_PASSWORD: "ChangeMe!Complex123"
+          MEDIA_SIGNING_SECRET: "0123456789abcdef0123456789abcdef"
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    # Les pages de données live sont en `force-dynamic` : le build n'exige
+    # aucune base de données (seules des variables d'env valides sont requises).
+    env:
+      DATABASE_URL: "mysql://user:pass@localhost:3306/jaze_ci"
+      DATABASE_TLS_REQUIRED: "false"
+      NODE_ENV: "production"
+      ADMIN_EMAIL: "admin@example.com"
+      ADMIN_PASSWORD: "ChangeMe!Complex123"
+      MEDIA_SIGNING_SECRET: "0123456789abcdef0123456789abcdef"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: jaze-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build

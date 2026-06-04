@@ -9,6 +9,7 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
+import { useCsrfToken } from "@/lib/useCsrfToken";
 
 export type TrackInfo = {
   id: number;
@@ -42,12 +43,28 @@ type PlayerContextType = {
   seek: (seconds: number) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  // File d'attente
+  playAt: (index: number) => void;
+  removeFromQueue: (index: number) => void;
+  reorderQueue: (from: number, to: number) => void;
+  addToQueue: (track: TrackInfo) => void;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Élément audio caché qui précharge la piste suivante (lecture sans latence).
+  const preloadRef = useRef<HTMLAudioElement | null>(null);
+  const { csrfToken } = useCsrfToken();
+  const csrfRef = useRef<string | null>(null);
+  // Synchronise le token dans une ref pour pouvoir l'utiliser dans les
+  // gestionnaires d'événements audio sans recréer les listeners.
+  useEffect(() => {
+    csrfRef.current = csrfToken;
+  }, [csrfToken]);
+  // Horodatage de la dernière sauvegarde de position (throttle reprise).
+  const lastProgressSaveRef = useRef(0);
 
   const [queue, setQueue] = useState<TrackInfo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -63,6 +80,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Garde la queue originale pour pouvoir désactiver le shuffle
   const originalQueueRef = useRef<TrackInfo[]>([]);
+
+  // Enregistre un événement de lecture côté serveur (best-effort, ignoré si
+  // l'utilisateur n'est pas connecté ou si le token CSRF n'est pas prêt).
+  const postPlayEvent = useCallback(
+    (trackId: number, action: "play" | "progress", positionSeconds = 0) => {
+      const token = csrfRef.current;
+      if (!token) return;
+      fetch("/api/plays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+        credentials: "same-origin",
+        body: JSON.stringify({ trackId, action, positionSeconds }),
+        keepalive: true,
+      }).catch(() => {});
+    },
+    []
+  );
 
   // ⚡ Charge et lance la piste
   const loadAndPlay = (tracks: TrackInfo[], index: number) => {
@@ -84,6 +118,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       .then(() => {
         setIsPlaying(true);
         setIsLoading(false);
+        lastProgressSaveRef.current = Date.now();
+        postPlayEvent(track.id, "play");
       })
       .catch((err: unknown) => {
         console.error("Erreur de lecture:", err);
@@ -262,6 +298,55 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // === File d'attente ===
+  const playAt = (index: number) => {
+    if (index >= 0 && index < queue.length) {
+      loadAndPlay(queue, index);
+    }
+  };
+
+  const removeFromQueue = (index: number) => {
+    if (index < 0 || index >= queue.length) return;
+    // On ne retire pas la piste en cours de lecture.
+    if (index === currentIndex) return;
+    const next = [...queue];
+    next.splice(index, 1);
+    setQueue(next);
+    originalQueueRef.current = next;
+    if (index < currentIndex) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
+
+  const reorderQueue = (from: number, to: number) => {
+    if (
+      from < 0 ||
+      to < 0 ||
+      from >= queue.length ||
+      to >= queue.length ||
+      from === to
+    ) {
+      return;
+    }
+    const next = [...queue];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setQueue(next);
+    originalQueueRef.current = next;
+    // Recalcule l'index courant après le déplacement.
+    const newCurrent = next.findIndex((t) => t.id === currentTrack?.id);
+    if (newCurrent >= 0) setCurrentIndex(newCurrent);
+  };
+
+  const addToQueue = (track: TrackInfo) => {
+    setQueue((prev) => {
+      if (prev.some((t) => t.id === track.id)) return prev;
+      const next = [...prev, track];
+      originalQueueRef.current = next;
+      return next;
+    });
+  };
+
   // 🎚 Suivi du temps / durée / fin de piste
   useEffect(() => {
     const audio = audioRef.current;
@@ -269,6 +354,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const handleTimeUpdate = () => {
       setProgress(audio.currentTime);
+      // Sauvegarde la position toutes les ~15s pour la reprise de lecture.
+      const now = Date.now();
+      if (currentTrack && now - lastProgressSaveRef.current > 15000) {
+        lastProgressSaveRef.current = now;
+        postPlayEvent(currentTrack.id, "progress", audio.currentTime);
+      }
     };
 
     const handleLoadedMetadata = () => {
@@ -288,7 +379,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [playNext]);
+  }, [playNext, currentTrack, postPlayEvent]);
+
+  // 🔮 Préchargement de la piste suivante pour une lecture sans latence.
+  useEffect(() => {
+    const preload = preloadRef.current;
+    if (!preload) return;
+    const nextIndex = currentIndex + 1;
+    const nextTrack = repeat === "all" && nextIndex >= queue.length
+      ? queue[0]
+      : queue[nextIndex];
+    if (nextTrack && preload.src !== nextTrack.audioUrl) {
+      preload.src = nextTrack.audioUrl;
+      preload.load();
+    }
+  }, [currentIndex, queue, repeat]);
 
   // 🧹 Cleanup à la destruction du composant
   useEffect(() => {
@@ -322,6 +427,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     seek,
     toggleShuffle,
     toggleRepeat,
+    playAt,
+    removeFromQueue,
+    reorderQueue,
+    addToQueue,
   };
 
   return (
@@ -329,6 +438,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       {children}
       {/* 🔊 Élément audio global unique */}
       <audio ref={audioRef} style={{ display: "none" }} />
+      {/* 🔮 Élément caché de préchargement de la piste suivante */}
+      <audio ref={preloadRef} preload="auto" style={{ display: "none" }} />
     </PlayerContext.Provider>
   );
 }

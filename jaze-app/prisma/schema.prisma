@@ -53,11 +53,17 @@ model Track {
   durationSeconds Int?
   audioUrl        String
   isExplicit      Boolean  @default(false)
+  playCount       Int      @default(0)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   album           Album    @relation(fields: [albumId], references: [id])
+
+  trackFavorites   TrackFavorite[]
+  playlistItems    PlaylistItem[]
+  playHistory      PlayHistory[]
+  playbackProgress PlaybackProgress[]
 }
 
 enum Role {
@@ -104,6 +110,10 @@ model User {
   sessions Session[]
   auditLogs AuditLog[]
   favorites Favorite[]
+  trackFavorites   TrackFavorite[]
+  playlists        Playlist[]
+  playHistory      PlayHistory[]
+  playbackProgress PlaybackProgress[]
 }
 
 model Account {
@@ -160,4 +170,73 @@ model Favorite {
   @@unique([userId, albumId])
   @@index([userId])
   @@index([albumId])
+}
+
+model TrackFavorite {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  trackId   Int
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+  @@index([userId])
+  @@index([trackId])
+}
+
+model Playlist {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items PlaylistItem[]
+
+  @@index([userId])
+}
+
+model PlaylistItem {
+  id         Int      @id @default(autoincrement())
+  playlistId String
+  trackId    Int
+  position   Int
+  createdAt  DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track    Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId])
+  @@index([trackId])
+}
+
+model PlayHistory {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  trackId   Int
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([trackId])
+}
+
+model PlaybackProgress {
+  id              Int      @id @default(autoincrement())
+  userId          String
+  trackId         Int
+  positionSeconds Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+  @@index([userId, updatedAt])
 }

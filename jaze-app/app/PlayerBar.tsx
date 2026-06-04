@@ -19,6 +19,7 @@ import PauseIcon from "@mui/icons-material/Pause";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import RepeatOneIcon from "@mui/icons-material/RepeatOne";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import { QueuePanel } from "./QueuePanel";
 
 function formatTime(seconds: number) {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -216,6 +217,7 @@ export function PlayerBar() {
               justifyContent: "flex-end",
             }}
           >
+            <QueuePanel />
             <VolumeUpIcon fontSize="small" sx={{ color: "text.secondary" }} />
             <Slider
               min={0}
@@ -224,7 +226,7 @@ export function PlayerBar() {
               value={volume}
               onChange={(_: Event, v: number | number[]) => setVolume(Number(v))}
               aria-label="Volume"
-              sx={{ width: { xs: "60%", sm: 120 } }}
+              sx={{ width: { xs: "55%", sm: 120 } }}
             />
           </Stack>
         </Stack>

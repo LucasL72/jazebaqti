@@ -37,7 +37,8 @@ function serializeSessionCookie(token: string, role: Role) {
   return `${role}:${token}`;
 }
 
-export type AdminSession = (Session & { user: User }) | null;
+export type AuthenticatedAdminSession = Session & { user: User };
+export type AdminSession = AuthenticatedAdminSession | null;
 
 export async function createAdminSession(userId: string, role: Role) {
   const token = crypto.randomBytes(32).toString("hex");
@@ -111,7 +112,9 @@ export async function getCurrentAdminSession(): Promise<AdminSession> {
   return session;
 }
 
-export async function requireAdminSession(): Promise<AdminSession | NextResponse> {
+export async function requireAdminSession(): Promise<
+  AuthenticatedAdminSession | NextResponse
+> {
   const session = await getCurrentAdminSession();
   if (!session || session.role !== Role.admin || session.user.role !== Role.admin) {
     return NextResponse.json(

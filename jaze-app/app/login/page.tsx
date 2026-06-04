@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
@@ -17,7 +17,7 @@ import { useCsrfToken } from "@/lib/useCsrfToken";
 import { sanitizeTextInput } from "@/lib/sanitizers";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
@@ -165,5 +165,13 @@ export default function LoginPage() {
         </Box>
       </Paper>
     </Box>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

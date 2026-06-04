@@ -19,7 +19,7 @@ function isLocalMediaUrl(url: string | null | undefined) {
 }
 
 async function deleteLegacyLocalFile(url: string | null | undefined) {
-  if (!isLocalMediaUrl(url)) return;
+  if (!url || !isLocalMediaUrl(url)) return;
   const relative = url.replace(/^\//, "");
   const fsPath = path.join(process.cwd(), "public", relative);
 

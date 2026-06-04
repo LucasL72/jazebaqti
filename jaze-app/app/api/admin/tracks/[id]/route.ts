@@ -50,7 +50,8 @@ export async function PATCH(req: Request, context: Params) {
         title,
         trackNumber,
         durationSeconds,
-        audioUrl,
+        // audioUrl est requis en base : on ignore une valeur nulle/absente.
+        audioUrl: audioUrl ?? undefined,
         isExplicit,
       },
     });

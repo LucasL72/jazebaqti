@@ -18,14 +18,7 @@ import {
   Alert,
 } from "@mui/material";
 import { AuditSeverity, Role } from "@prisma/client";
-
-type AuditAction =
-  | "album.create"
-  | "album.delete"
-  | "media.upload"
-  | "role.change"
-  | "auth.login.success"
-  | "auth.login.failure";
+import type { AuditAction } from "@/lib/audit-log";
 
 type AuditLogRow = {
   id: number;

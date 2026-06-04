@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -13,7 +13,7 @@ import {
 import { useCsrfToken } from "@/lib/useCsrfToken";
 import { sanitizeTextInput } from "@/lib/sanitizers";
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin/albums";
@@ -137,5 +137,13 @@ export default function AdminLoginPage() {
         </Box>
       </Paper>
     </Box>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminLoginForm />
+    </Suspense>
   );
 }

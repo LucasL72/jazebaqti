@@ -74,6 +74,24 @@ export const updateTrackSchema = z.object({
   isExplicit: z.boolean().optional(),
 });
 
+// Playlist validation schemas
+export const createPlaylistSchema = z.object({
+  name: z.string().trim().min(1, "Le nom est requis").max(120),
+});
+
+export const renamePlaylistSchema = z.object({
+  name: z.string().trim().min(1, "Le nom est requis").max(120),
+});
+
+export const addPlaylistTrackSchema = z.object({
+  trackId: z.number().int().positive("Identifiant de piste invalide"),
+});
+
+export const reorderPlaylistSchema = z.object({
+  // Liste ordonnée des identifiants de pistes (nouvel ordre).
+  trackIds: z.array(z.number().int().positive()).min(1, "Ordre invalide"),
+});
+
 // Helper function to validate and return errors
 export function validateSchema<T>(
   schema: z.ZodSchema<T>,
@@ -85,6 +103,6 @@ export function validateSchema<T>(
   }
   return {
     success: false,
-    errors: result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`),
+    errors: result.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`),
   };
 }
