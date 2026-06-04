@@ -1,6 +1,6 @@
 # Jaze Baqti – plateforme de streaming
 
-Application Next.js/App Router (dossier `jaze-app/`) dédiée à l'univers musical de Jaze Baqti. Elle propose une grille d'albums avec lecture continue, gestion des favoris et un espace admin sécurisé pour la gestion des contenus.
+Application Next.js/App Router (dossier `jaze-app/`) dédiée à l'univers musical de Jaze Baqti. Elle propose une grille d'albums avec lecture continue, des **favoris album et piste**, des **playlists personnalisées**, un **historique d'écoute avec reprise**, une **file d'attente réordonnable** et un espace admin sécurisé pour la gestion des contenus. Streaming audio avec **HTTP Range**, intégration continue (lint/typecheck/tests/build) et tests Vitest.
 
 ## Structure du dépôt
 - `jaze-app/` : code de l'application (Next.js + TypeScript + MUI) et styles globaux.
