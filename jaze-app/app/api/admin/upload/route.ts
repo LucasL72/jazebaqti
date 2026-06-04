@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { logAuditEvent } from "@/lib/audit-log";
 import { AuditSeverity } from "@prisma/client";
 import { validateAndStoreMedia } from "@/lib/media-storage";
+import { maybeTranscodeAudioToOpus } from "@/lib/audio-transcode";
 import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 export async function POST(req: Request) {
@@ -53,6 +54,11 @@ export async function POST(req: Request) {
       type,
       albumId,
     });
+
+    // Génère une version Opus optimisée à côté de l'original (opt-in, ffmpeg).
+    if (type === "audio") {
+      await maybeTranscodeAudioToOpus(persisted.storagePath).catch(() => {});
+    }
 
     await logAuditEvent("media.upload", {
       actor: session.user,
