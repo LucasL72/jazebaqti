@@ -20,6 +20,8 @@ import { GlobalNav } from "@/app/GlobalNav";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { useFavoriteAlbums } from "@/lib/useFavoriteAlbums";
+import { useTrackFavorites } from "@/lib/useTrackFavorites";
+import { AddToPlaylistButton } from "@/app/AddToPlaylistButton";
 
 type Track = {
   id: number;
@@ -44,6 +46,10 @@ export default function AlbumPage() {
   const [album, setAlbum] = useState<Album | null>(null);
   const { currentTrack, isPlaying, playTrackList } = usePlayer();
   const { isFavorite, toggleFavorite, loading: favoritesLoading } = useFavoriteAlbums();
+  const {
+    isFavorite: isTrackFavorite,
+    toggleFavorite: toggleTrackFavorite,
+  } = useTrackFavorites();
 
   useEffect(() => {
     fetch(`/api/albums/${albumId}`)
@@ -210,19 +216,42 @@ export default function AlbumPage() {
                   </Typography>
                 </Stack>
 
-                <Button
-                  variant={isCurrent && isPlaying ? "contained" : "outlined"}
-                  size="small"
-                  onClick={() => {
-                    playTrackList(queueForAlbum, index);
-                  }}
-                  sx={{
-                    ml: 2,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {isCurrent && isPlaying ? "⏸ Pause" : "▶ Écouter"}
-                </Button>
+                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ ml: 2 }}>
+                  <Tooltip
+                    title={
+                      isTrackFavorite(track.id)
+                        ? "Retirer des titres aimés"
+                        : "J'aime ce titre"
+                    }
+                    arrow
+                  >
+                    <IconButton
+                      size="small"
+                      aria-label="Aimer ce titre"
+                      color={isTrackFavorite(track.id) ? "error" : "default"}
+                      onClick={() => toggleTrackFavorite(track.id)}
+                    >
+                      {isTrackFavorite(track.id) ? (
+                        <FavoriteIcon fontSize="small" />
+                      ) : (
+                        <FavoriteBorderIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+
+                  <AddToPlaylistButton trackId={track.id} />
+
+                  <Button
+                    variant={isCurrent && isPlaying ? "contained" : "outlined"}
+                    size="small"
+                    onClick={() => {
+                      playTrackList(queueForAlbum, index);
+                    }}
+                    sx={{ whiteSpace: "nowrap" }}
+                  >
+                    {isCurrent && isPlaying ? "⏸ Pause" : "▶ Écouter"}
+                  </Button>
+                </Stack>
               </Card>
             );
           })}

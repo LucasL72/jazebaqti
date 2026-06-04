@@ -12,22 +12,22 @@ export function useAudioFormat(): AudioFormat {
   useEffect(() => {
     const audio = document.createElement("audio");
 
-    // Test Opus (meilleur qualité/taille)
-    if (audio.canPlayType('audio/ogg; codecs="opus"') === "probably" ||
-        audio.canPlayType('audio/ogg; codecs="opus"') === "maybe") {
-      setFormat("opus");
-      return;
-    }
+    const canPlay = (type: string) => {
+      const support = audio.canPlayType(type);
+      return support === "probably" || support === "maybe";
+    };
 
-    // Test AAC (bon pour iOS)
-    if (audio.canPlayType("audio/mp4; codecs=mp4a.40.2") === "probably" ||
-        audio.canPlayType("audio/mp4; codecs=mp4a.40.2") === "maybe") {
-      setFormat("aac");
-      return;
-    }
+    // Priorité : Opus (meilleur ratio qualité/taille) > AAC (iOS) > MP3.
+    const detected: AudioFormat = canPlay('audio/ogg; codecs="opus"')
+      ? "opus"
+      : canPlay("audio/mp4; codecs=mp4a.40.2")
+        ? "aac"
+        : "mp3";
 
-    // Fallback MP3 (universel)
-    setFormat("mp3");
+    // Détection de capacité au montage : synchronisation unique et légitime
+    // avec une API navigateur externe (pas de rendu en cascade).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFormat(detected);
   }, []);
 
   return format;

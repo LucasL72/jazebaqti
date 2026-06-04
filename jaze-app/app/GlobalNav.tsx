@@ -28,6 +28,7 @@ const navItems = [
   { label: "Accueil", href: "/" },
   { label: "Artiste", href: "/artist" },
   { label: "Mes favoris", href: "/favorites" },
+  { label: "Mes playlists", href: "/playlists" },
 ];
 
 export function GlobalNav() {

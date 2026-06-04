@@ -5,6 +5,7 @@ import { Typography } from "@mui/material";
 import { PlayerBar } from "./PlayerBar";
 import { GlobalNav } from "./GlobalNav";
 import { AlbumSearch } from "./AlbumSearch";
+import { RecentlyPlayed } from "./RecentlyPlayed";
 
 export default async function HomePage() {
   const albums = await prisma.album.findMany({
@@ -53,6 +54,8 @@ export default async function HomePage() {
           Un espace dédié à la musique de Jaze Baqti, avec lecture continue,
           vinyle animé et player global persistant.
         </Typography>
+
+        <RecentlyPlayed />
 
         <AlbumSearch albums={albumsForGrid} />
       </main>
