@@ -15,6 +15,9 @@ import BrushIcon from "@mui/icons-material/Brush";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 
+// Données live (artiste + albums) : rendu dynamique, pas de prérendu figé.
+export const dynamic = "force-dynamic";
+
 export default async function ArtistPage() {
   // 1) Récupération de l'artiste
   const artist = await prisma.artist.findFirst();

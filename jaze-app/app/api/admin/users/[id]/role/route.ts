@@ -6,7 +6,7 @@ import { logAuditEvent } from "@/lib/audit-log";
 import { rejectIfInvalidCsrf } from "@/lib/csrf";
 
 type Params = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 function isRole(value: string): value is Role {
@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
   }
 
-  const targetId = params.id;
+  const { id: targetId } = await params;
 
   try {
     const existing = await prisma.user.findUnique({ where: { id: targetId } });

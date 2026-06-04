@@ -7,6 +7,9 @@ import { GlobalNav } from "./GlobalNav";
 import { AlbumSearch } from "./AlbumSearch";
 import { RecentlyPlayed } from "./RecentlyPlayed";
 
+// Données live (catalogue) : rendu dynamique, pas de prérendu statique figé.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const albums = await prisma.album.findMany({
     include: {
