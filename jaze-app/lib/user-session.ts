@@ -24,7 +24,8 @@ function parseSessionCookie(raw: string | undefined) {
   return { role: role as Role, token };
 }
 
-export type UserSession = (Session & { user: User }) | null;
+export type AuthenticatedUserSession = Session & { user: User };
+export type UserSession = AuthenticatedUserSession | null;
 
 export async function createUserSession(userId: string, role: Role) {
   const token = crypto.randomBytes(32).toString("hex");
@@ -89,7 +90,9 @@ export async function getCurrentUserSession(): Promise<UserSession> {
   return session;
 }
 
-export async function requireUserSession(): Promise<UserSession | NextResponse> {
+export async function requireUserSession(): Promise<
+  AuthenticatedUserSession | NextResponse
+> {
   const session = await getCurrentUserSession();
   if (!session) {
     return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
